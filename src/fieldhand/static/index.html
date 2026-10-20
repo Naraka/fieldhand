@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fieldhand</title>
+<meta name="description" content="Fieldhand is an economic game for bots: land, labour, coins and survival, played through an HTTP API.">
+<style>
+:root {
+  --bg: #eef0e6; --surface: #f8f9f2; --ink: #1f2a1c; --muted: #5d6656; --line: #cdd3c0;
+  --field: #3f6b35; --field-soft: #dce8d2; --grain: #b8860b; --grain-soft: #f3e6c4;
+  --danger: #a63d2a; --danger-soft: #f4ddd6;
+  --o1: #2a78d6; --o2: #eb6834; --o3: #1baf7a; --o4: #eda100; --o5: #e87ba4; --o-other: #b3b9a8;
+  --f-display: "Archivo Narrow", "Arial Narrow", system-ui, sans-serif;
+  --f-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-num: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141a12; --surface: #1d251a; --ink: #e6ecdc; --muted: #9ba68f; --line: #33402d;
+    --field: #8fc27a; --field-soft: #24341f; --grain: #e0b54a; --grain-soft: #3a3018;
+    --danger: #f08a72; --danger-soft: #3d221b;
+    --o1: #3987e5; --o2: #d95926; --o3: #199e70; --o4: #c98500; --o5: #d55181; --o-other: #46513f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141a12; --surface: #1d251a; --ink: #e6ecdc; --muted: #9ba68f; --line: #33402d;
+  --field: #8fc27a; --field-soft: #24341f; --grain: #e0b54a; --grain-soft: #3a3018;
+  --danger: #f08a72; --danger-soft: #3d221b;
+  --o1: #3987e5; --o2: #d95926; --o3: #199e70; --o4: #c98500; --o5: #d55181; --o-other: #46513f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 15px; line-height: 1.45;
+  padding: 20px 16px 48px;
+}
+.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+h1, h2, h3 { font-family: var(--f-display); font-stretch: 80%; margin: 0; }
+h1 { font-size: 2.4rem; font-weight: 900; line-height: 1; }
+h2 { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+a { color: var(--field); }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.day { font-family: var(--f-num); font-size: .8rem; color: var(--muted); text-transform: uppercase; text-align: right; }
+.day b { color: var(--ink); font-size: 1.6rem; display: block; }
+.stats {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px;
+  background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+}
+.stat { background: var(--surface); padding: 10px 12px; min-width: 0; }
+.stat span { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.stat b { font-family: var(--f-num); font-size: 1.2rem; }
+.stat small { display: block; font-size: .72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 560px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .stat:last-child { grid-column: span 2; }
+}
+nav.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+nav.tabs button {
+  font: inherit; background: transparent; color: var(--muted); border: 0; border-bottom: 3px solid transparent;
+  padding: 8px 12px; font-family: var(--f-display); font-stretch: 85%; font-size: 1rem; font-weight: 800; cursor: pointer;
+}
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--field); }
+.view { display: flex; flex-direction: column; gap: 14px; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+button.small {
+  font: inherit; font-weight: 700; font-size: .85rem; border-radius: 6px; padding: 6px 12px; cursor: pointer;
+  border: 1px solid var(--field); background: transparent; color: var(--field);
+}
+button:focus-visible { outline: 3px solid var(--grain); outline-offset: 2px; }
+#map { width: 100%; height: auto; max-height: 62vh; display: block; }
+#map rect { stroke-width: .06; }
+#map rect.free { fill: var(--bg); stroke: var(--muted); stroke-dasharray: .12 .1; }
+#map rect.idle { opacity: .45; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .82rem; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; }
+.timeline { display: flex; align-items: center; gap: 10px; }
+.timeline input { flex: 1; accent-color: var(--field); min-width: 0; }
+.charts { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 680px) { .charts { grid-template-columns: 1fr 1fr; } }
+.chart { position: relative; min-width: 0; }
+.chart h3 { font-size: .95rem; font-weight: 800; }
+.chart .sub { font-size: .75rem; color: var(--muted); margin-bottom: 4px; }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart .grid line { stroke: var(--line); }
+.chart .ax text { fill: var(--muted); font-family: var(--f-num); font-size: 10px; }
+.chart path.ln { fill: none; stroke: var(--field); stroke-width: 2; stroke-linejoin: round; }
+.chart path.ar { fill: var(--field-soft); }
+.chart .hov line { stroke: var(--ink); stroke-dasharray: 3 3; }
+.chart .hov circle { fill: var(--field); stroke: var(--surface); stroke-width: 2; }
+.tip {
+  position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: .75rem;
+  padding: 4px 8px; border-radius: 4px; white-space: nowrap; font-family: var(--f-num); transform: translate(-50%, -120%);
+}
+.rankings { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 680px) { .rankings { grid-template-columns: repeat(3, 1fr); } }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+td, th { padding: 5px 6px; text-align: left; border-bottom: 1px solid var(--line); }
+th { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+td.r { text-align: right; }
+td.name { overflow-wrap: anywhere; }
+.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: .88rem; }
+.log li { padding-left: 10px; border-left: 2px solid var(--line); }
+.log li.death { border-left-color: var(--danger); color: var(--danger); }
+.log li.land { border-left-color: var(--grain); }
+.log li.register, .log li.claim { border-left-color: var(--field); }
+.log .d { font-family: var(--f-num); color: var(--muted); font-size: .78rem; margin-right: 6px; }
+pre {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px;
+  overflow-x: auto; font-family: var(--f-num); font-size: .8rem; margin: 6px 0 0;
+}
+.error { border: 2px solid var(--danger); background: var(--danger-soft); color: var(--danger); border-radius: 8px; padding: 10px 14px; font-weight: 700; }
+footer { font-size: .8rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Fieldhand</h1>
+      <div class="muted">An economic game for bots. Land, labour, coins and survival.</div>
+    </div>
+    <div class="day">Day<b id="day" class="num">–</b><span id="left" class="num"></span></div>
+  </header>
+
+  <div id="error" class="error" hidden>The server is not answering. The world is paused until it is back.</div>
+
+  <div class="stats">
+    <div class="stat"><span>Players</span><b id="sPlayers" class="num">–</b><small id="sDeaths"></small></div>
+    <div class="stat"><span>Plots</span><b id="sPlots" class="num">–</b><small id="sFree"></small></div>
+    <div class="stat"><span>Ration</span><b id="sRation" class="num">–</b><small>coins</small></div>
+    <div class="stat"><span>Wage</span><b id="sWage" class="num">–</b><small>coins a day</small></div>
+    <div class="stat"><span>Land</span><b id="sLand" class="num">–</b><small>coins a plot</small></div>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-view="village" aria-selected="true">Village</button>
+    <button role="tab" data-view="economy" aria-selected="false">Economy</button>
+    <button role="tab" data-view="rankings" aria-selected="false">Rankings</button>
+    <button role="tab" data-view="log" aria-selected="false">Log</button>
+    <button role="tab" data-view="play" aria-selected="false">Play</button>
+  </nav>
+
+  <section id="village" class="view">
+    <div class="box">
+      <svg id="map" role="img" aria-label="Map of the village: every plot and its owner"></svg>
+    </div>
+    <div id="legend" class="legend"></div>
+    <div class="timeline">
+      <button id="playBtn" class="small">Replay</button>
+      <input id="range" type="range" min="0" max="0" value="0" aria-label="Day shown on the map">
+      <span id="rangeLbl" class="num muted">today</span>
+    </div>
+    <p class="muted" style="margin:0">Plots are laid out in a spiral, oldest in the centre. A new plot appears every
+      time someone registers. Faded plots have not been harvested yet today.</p>
+  </section>
+
+  <section id="economy" class="view" hidden>
+    <div id="charts" class="charts"></div>
+    <p id="noStats" class="muted" hidden>Charts appear after the first day closes.</p>
+  </section>
+
+  <section id="rankings" class="view" hidden>
+    <div class="rankings">
+      <div class="box"><h2>Best life</h2><p class="muted" style="margin:2px 0 6px">rations eaten</p><table id="rLife"></table></div>
+      <div class="box"><h2>Richest</h2><p class="muted" style="margin:2px 0 6px">coins, land and food</p><table id="rWealth"></table></div>
+      <div class="box"><h2>Longest alive</h2><p class="muted" style="margin:2px 0 6px">days without dying</p><table id="rAlive"></table></div>
+    </div>
+  </section>
+
+  <section id="log" class="view" hidden>
+    <ul id="events" class="log"></ul>
+  </section>
+
+  <section id="play" class="view" hidden>
+    <div class="box">
+      <h2>Play in 5 minutes</h2>
+      <p>You don't click: you write a bot. Register, keep the token and call the API once a day or more.</p>
+      <pre id="snippet"></pre>
+      <p>Or start from the example bot, which uses only the Python standard library:</p>
+      <pre>git clone https://github.com/Naraka/fieldhand
+python fieldhand/examples/bot.py --name my-bot --server <span class="origin"></span></pre>
+      <p>Run it with <code>--once</code> from cron to play one day per run.
+        The full API is documented at <a href="docs">/docs</a> and the rules are in
+        <a href="https://github.com/Naraka/fieldhand/blob/main/docs/RULES.md">RULES.md</a>.</p>
+    </div>
+  </section>
+
+  <footer>
+    Fieldhand is free software (AGPL-3.0). Source on
+    <a href="https://github.com/Naraka/fieldhand">GitHub</a>.
+  </footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = (id) => document.getElementById(id);
+const SVGNS = "http://www.w3.org/2000/svg";
+const OWNER_COLORS = ["var(--o1)", "var(--o2)", "var(--o3)", "var(--o4)", "var(--o5)"];
+const REFRESH_MS = 15000;
+
+let clock = null;            // last /clock answer and the local time it arrived
+let plots = [];              // current owners from /plots
+let history = [];            // plot_log rows, oldest first
+let historyAfter = 0;
+let shownDay = null;         // null = today
+let replayTimer = null;
+let view = "village";
+let lastEventId = 0;
+let statsDay = -1;
+
+async function get(path) {
+  const r = await fetch(path, { headers: { Accept: "application/json" } });
+  if (!r.ok) throw new Error(`${path}: ${r.status}`);
+  return r.json();
+}
+
+const fmt = (v, digits = 2) => (v == null ? "–" : Number(v).toFixed(digits));
+
+// --- Clock ------------------------------------------------------------------
+
+function tickClock() {
+  if (!clock) return;
+  const left = Math.max(0, clock.seconds_left - (Date.now() - clock.at) / 1000);
+  const m = Math.floor(left / 60), s = Math.floor(left % 60);
+  $("left").textContent = `closes in ${m}:${String(s).padStart(2, "0")}`;
+  if (left === 0) refresh();
+}
+
+// --- Map --------------------------------------------------------------------
+
+// Square spiral: plot 1 in the centre, then outwards.
+const SPIRAL = [[0, 0]];
+let sx = 0, sy = 0, sd = 0, legLen = 1, legStep = 0, legs = 0;
+function spiral(i) {
+  const DX = [1, 0, -1, 0], DY = [0, 1, 0, -1];
+  while (SPIRAL.length <= i) {
+    sx += DX[sd]; sy += DY[sd]; SPIRAL.push([sx, sy]);
+    if (++legStep === legLen) { legStep = 0; sd = (sd + 1) % 4; if (++legs % 2 === 0) legLen++; }
+  }
+  return SPIRAL[i];
+}
+
+function ownersOn(day) {
+  // Replay the ownership log up to the end of `day`.
+  const owners = [];
+  for (const row of history) {
+    if (row.day > day) break;
+    owners[row.plot_id - 1] = row.owner;
+  }
+  return owners;
+}
+
+function renderMap() {
+  const live = shownDay === null;
+  const owners = live ? plots.map((p) => p.owner) : ownersOn(shownDay);
+  const counts = {};
+  owners.forEach((o) => { if (o) counts[o] = (counts[o] || 0) + 1; });
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5).map((e) => e[0]);
+
+  const svg = $("map");
+  svg.replaceChildren();
+  let minX = 0, minY = 0, maxX = 0, maxY = 0;
+  owners.forEach((_, i) => {
+    const [x, y] = spiral(i);
+    minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+  });
+  svg.setAttribute("viewBox", `${minX - 0.6} ${minY - 0.6} ${maxX - minX + 2.2} ${maxY - minY + 2.2}`);
+  owners.forEach((o, i) => {
+    const [x, y] = spiral(i);
+    const r = document.createElementNS(SVGNS, "rect");
+    r.setAttribute("x", x + 0.06); r.setAttribute("y", y + 0.06);
+    r.setAttribute("width", 0.88); r.setAttribute("height", 0.88); r.setAttribute("rx", 0.08);
+    if (!o) r.setAttribute("class", "free");
+    else {
+      const k = top.indexOf(o);
+      r.style.fill = k >= 0 ? OWNER_COLORS[k] : "var(--o-other)";
+      if (live && !plots[i].harvested) r.setAttribute("class", "idle");
+    }
+    const t = document.createElementNS(SVGNS, "title");
+    t.textContent = `Plot ${i + 1}: ${o || "free"}`;
+    r.append(t);
+    svg.append(r);
+  });
+
+  const lg = $("legend");
+  lg.replaceChildren();
+  const item = (color, label, extra = "") => {
+    const s = document.createElement("span");
+    const i = document.createElement("i");
+    i.style.cssText = `background:${color};${extra}`;
+    s.append(i, label);
+    lg.append(s);
+  };
+  top.forEach((o, k) => item(OWNER_COLORS[k], `${o} · ${counts[o]}`));
+  const others = Object.entries(counts).filter(([o]) => !top.includes(o)).reduce((s, [, c]) => s + c, 0);
+  if (others) item("var(--o-other)", `Others · ${others}`);
+  item("var(--bg)", `Free · ${owners.filter((o) => !o).length}`, "border:1px dashed var(--muted)");
+
+  const range = $("range");
+  range.max = clock ? clock.day : 0;
+  if (live) range.value = range.max;
+  $("rangeLbl").textContent = live ? "today" : `end of day ${shownDay}`;
+}
+
+function stopReplay() {
+  if (replayTimer) { clearInterval(replayTimer); replayTimer = null; $("playBtn").textContent = "Replay"; }
+}
+
+$("range").addEventListener("input", (e) => {
+  stopReplay();
+  const d = +e.target.value;
+  shownDay = clock && d >= clock.day ? null : d;
+  renderMap();
+});
+
+$("playBtn").addEventListener("click", () => {
+  if (replayTimer) { stopReplay(); return; }
+  const last = clock ? clock.day : 0;
+  const step = Math.max(1, Math.ceil(last / 200));
+  const ms = matchMedia("(prefers-reduced-motion: reduce)").matches ? 400 : 60;
+  let d = 0;
+  $("playBtn").textContent = "Pause";
+  replayTimer = setInterval(() => {
+    if (d >= last) { stopReplay(); shownDay = null; renderMap(); return; }
+    shownDay = d; renderMap(); d += step;
+  }, ms);
+});
+
+// --- Charts -----------------------------------------------------------------
+
+function niceTicks(lo, hi, n) {
+  if (hi <= lo) hi = lo + 1;
+  const raw = (hi - lo) / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), err = raw / mag;
+  const step = (err >= 7.5 ? 10 : err >= 3.5 ? 5 : err >= 1.5 ? 2 : 1) * mag;
+  const ticks = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) ticks.push(+v.toFixed(6));
+  return ticks;
+}
+
+function lineChart(host, title, sub, days, values, format, opts = {}) {
+  const pairs = days.map((d, i) => [d, values[i]]).filter(([, v]) => v != null);
+  if (pairs.length < 2) return;
+  const W = 560, H = 170, L = 44, R = 10, T = 10, B = 24;
+  const vs = pairs.map((p) => p[1]);
+  let lo = opts.min ?? Math.min(...vs), hi = opts.max ?? Math.max(...vs);
+  if (opts.min == null) { const pad = (hi - lo) * 0.1 || Math.abs(hi) * 0.1 || 1; lo = Math.max(0, lo - pad); hi += pad; }
+  const ticks = niceTicks(lo, hi, 3);
+  lo = Math.min(lo, ticks[0]); hi = Math.max(hi, ticks[ticks.length - 1]);
+  const d0 = pairs[0][0], d1 = pairs[pairs.length - 1][0];
+  const X = (d) => L + (W - L - R) * (d - d0) / Math.max(1, d1 - d0);
+  const Y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+
+  const box = document.createElement("div");
+  box.className = "chart box";
+  const h = document.createElement("h3"); h.textContent = title;
+  const s = document.createElement("div"); s.className = "sub"; s.textContent = sub;
+  box.append(h, s);
+  const svg = document.createElementNS(SVGNS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", title);
+  const path = pairs.map(([d, v], k) => `${k ? "L" : "M"}${X(d).toFixed(1)},${Y(v).toFixed(1)}`).join("");
+  svg.innerHTML =
+    `<g class="grid">${ticks.map((t) => `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}"/>`).join("")}</g>` +
+    `<g class="ax">${ticks.map((t) => `<text x="${L - 6}" y="${Y(t) + 3}" text-anchor="end">${format(t)}</text>`).join("")}` +
+    `<text x="${L}" y="${H - 6}">day ${d0}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">day ${d1}</text></g>` +
+    (opts.area ? `<path class="ar" d="${path}L${X(d1)},${Y(lo)}L${X(d0)},${Y(lo)}Z"/>` : "") +
+    `<path class="ln" d="${path}"/><g class="hov" visibility="hidden"><line y1="${T}" y2="${H - B}"/><circle r="4"/></g>`;
+  box.append(svg);
+  const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; box.append(tip);
+  const hov = svg.querySelector(".hov"), hl = hov.querySelector("line"), hc = hov.querySelector("circle");
+  const move = (e) => {
+    const r = svg.getBoundingClientRect(), b = box.getBoundingClientRect();
+    const x = (e.clientX - r.left) * W / r.width;
+    const target = d0 + (x - L) / (W - L - R) * (d1 - d0);
+    let best = pairs[0];
+    for (const p of pairs) if (Math.abs(p[0] - target) < Math.abs(best[0] - target)) best = p;
+    hov.setAttribute("visibility", "visible");
+    hl.setAttribute("x1", X(best[0])); hl.setAttribute("x2", X(best[0]));
+    hc.setAttribute("cx", X(best[0])); hc.setAttribute("cy", Y(best[1]));
+    tip.hidden = false; tip.textContent = `day ${best[0]}: ${format(best[1])}`;
+    tip.style.left = `${X(best[0]) * r.width / W + r.left - b.left}px`;
+    tip.style.top = `${Y(best[1]) * r.height / H + r.top - b.top}px`;
+  };
+  svg.addEventListener("pointermove", move);
+  svg.addEventListener("pointerdown", move);
+  svg.addEventListener("pointerleave", () => { hov.setAttribute("visibility", "hidden"); tip.hidden = true; });
+  host.append(box);
+}
+
+async function renderEconomy() {
+  if (!clock || statsDay === clock.day) return;
+  const rows = await get(`stats?since_day=${Math.max(0, clock.day - 2000)}`);
+  statsDay = clock.day;
+  const host = $("charts");
+  host.replaceChildren();
+  $("noStats").hidden = rows.length > 1;
+  const days = rows.map((r) => r.day), col = (k) => rows.map((r) => r[k]);
+  lineChart(host, "Ration price", "coins per ration, daily average", days, col("ration_price"), (v) => fmt(v));
+  lineChart(host, "Wage", "coins per workday, daily average", days, col("wage"), (v) => fmt(v));
+  lineChart(host, "Deaths", "players who starved each day", days, col("deaths"), (v) => fmt(v, 0), { area: true });
+  lineChart(host, "Harvest", "% of plots harvested", days,
+    rows.map((r) => (r.plots ? 100 * r.harvested / r.plots : null)), (v) => `${fmt(v, 0)} %`, { min: 0, max: 100, area: true });
+  lineChart(host, "Landowners", "players with at least one plot", days, col("owners"), (v) => fmt(v, 0));
+  lineChart(host, "Money", "coins in the village", days, col("money"), (v) => fmt(v, 0), { area: true });
+}
+
+// --- Rankings and log -------------------------------------------------------
+
+function fillTable(table, rows, format) {
+  table.replaceChildren();
+  rows.slice(0, 15).forEach((r, i) => {
+    const tr = document.createElement("tr");
+    const cells = [String(i + 1), r.name, format(r.value)];
+    cells.forEach((text, k) => {
+      const td = document.createElement("td");
+      td.textContent = text;
+      td.className = k === 1 ? "name" : "r num";
+      tr.append(td);
+    });
+    table.append(tr);
+  });
+}
+
+async function renderRankings() {
+  const [life, wealth, alive] = await Promise.all(
+    ["life", "wealth", "alive"].map((by) => get(`ranking?by=${by}`)));
+  fillTable($("rLife"), life, (v) => fmt(v, 0));
+  fillTable($("rWealth"), wealth, (v) => fmt(v, 1));
+  fillTable($("rAlive"), alive, (v) => fmt(v, 0));
+}
+
+async function renderLog() {
+  const rows = await get(`events?after_id=${lastEventId}&limit=200`);
+  const list = $("events");
+  rows.reverse().forEach((e) => {
+    const li = document.createElement("li");
+    li.className = e.kind;
+    const d = document.createElement("span"); d.className = "d"; d.textContent = `day ${e.day}`;
+    li.append(d, e.text);
+    list.prepend(li);
+    lastEventId = Math.max(lastEventId, e.id);
+  });
+  while (list.children.length > 500) list.lastChild.remove();
+}
+
+// --- Refresh ----------------------------------------------------------------
+
+async function refresh() {
+  try {
+    const [c, w, p] = await Promise.all([get("clock"), get("world"), get("plots")]);
+    clock = { ...c, at: Date.now() };
+    plots = p;
+    for (;;) {
+      const rows = await get(`plots/history?after_id=${historyAfter}`);
+      history.push(...rows);
+      if (rows.length) historyAfter = rows[rows.length - 1].id;
+      if (rows.length < 5000) break;
+    }
+    $("error").hidden = true;
+    $("day").textContent = c.day;
+    $("sPlayers").textContent = w.players;
+    $("sPlots").textContent = w.plots;
+    $("sFree").textContent = `${w.free_plots} free`;
+    $("sRation").textContent = fmt(w.prices.ration_price);
+    $("sWage").textContent = fmt(w.prices.wage);
+    $("sLand").textContent = fmt(w.prices.land_price);
+    if (view === "village") renderMap();
+    if (view === "economy") await renderEconomy();
+    if (view === "rankings") await renderRankings();
+    if (view === "log") await renderLog();
+  } catch (err) {
+    $("error").hidden = false;
+  }
+}
+
+document.querySelectorAll("nav.tabs button").forEach((b) => {
+  b.addEventListener("click", () => {
+    view = b.dataset.view;
+    document.querySelectorAll("nav.tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
+    document.querySelectorAll(".view").forEach((s) => { s.hidden = s.id !== view; });
+    if (view !== "village") stopReplay();
+    refresh();
+  });
+});
+
+const origin = location.origin;
+document.querySelectorAll(".origin").forEach((el) => { el.textContent = origin; });
+$("snippet").textContent =
+`curl -X POST ${origin}/register -H 'Content-Type: application/json' -d '{"name": "my-bot"}'
+# → {"token": "..."}  keep it: it is shown only once
+
+curl ${origin}/me -H 'Authorization: Bearer <token>'
+curl -X POST ${origin}/claim -H 'Authorization: Bearer <token>'
+curl -X POST ${origin}/harvest -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"plot_id": 1}'
+curl -X POST ${origin}/eat -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"qty": 1}'`;
+
+refresh();
+setInterval(refresh, REFRESH_MS);
+setInterval(tickClock, 1000);
+})();
+</script>
+</body>
+</html>

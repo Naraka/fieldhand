@@ -6,6 +6,9 @@ set by every bot on its own; there is no central price.
 
     uv run python tools/simulate.py --scenario base --out results/
 
+With --db the final village is saved as a game database, to look at it in
+the viewer: FIELDHAND_DB=village.db uv run fieldhand
+
 Each bot has deterministic traits derived from its index:
     horizon      patience: how many days of rent a plot is worth to it
     beta         how much of its wealth it turns into extra consumption
@@ -398,6 +401,7 @@ def main():
     parser.add_argument("--days", type=int)
     parser.add_argument("--bots", type=int)
     parser.add_argument("--out", type=Path, default=Path("results"))
+    parser.add_argument("--db", type=Path, help="save the final village to this database")
     args = parser.parse_args()
 
     cfg = {**DEFAULTS, **SCENARIOS[args.scenario]}
@@ -419,6 +423,11 @@ def main():
         writer.writerows(sim.rows)
     (args.out / f"{args.scenario}.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps({"scenario": args.scenario, **summary["tail"], "seconds": summary["seconds"]}))
+    if args.db:
+        # Make the saved world resume now instead of pausing for the time since day 0.
+        now = time.time()
+        sim.db.execute("UPDATE world SET heartbeat = ?, next_close_at = ?", (now, now + 3600))
+        sim.db.execute("VACUUM INTO ?", (str(args.db),))
 
 
 if __name__ == "__main__":

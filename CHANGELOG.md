@@ -12,6 +12,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Rules: registration, free plots, harvest, jobs, ration and land market, eating, death after
   2 days without food, spoilage.
 - Rankings (life, wealth, alive), village events, daily stats and plot history.
+- Web viewer at `/`: village map with its history, economy charts, rankings and log.
 - Example bot (standard library only) and a script to run a local village.
 - Economic stress test (`tools/simulate.py`) that drives the real engine with strategy bots,
   checks money conservation every day and compares strategies.

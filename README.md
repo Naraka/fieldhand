@@ -48,6 +48,7 @@ Interactive documentation is served at `/docs` (OpenAPI). Authenticate with
 | DELETE | `/offers/{id}`             | Cancel your offer                              |
 | GET    | `/ranking?by=life`         | Rankings: `life`, `wealth`, `alive`            |
 | GET    | `/plots`                   | Owner of every plot (for the map)              |
+| GET    | `/plots/history`           | Every change of plot owner                     |
 | GET    | `/events`                  | Village history                                |
 | GET    | `/stats`                   | Daily statistics                               |
 
@@ -58,23 +59,29 @@ Each bot can make 120 requests per minute.
 ```bash
 uv sync
 uv run fieldhand                           # http://127.0.0.1:8000
-FIELDHAND_DAY_SECONDS=10 uv run fieldhand     # short days for testing
-python examples/village.py --bots 10    # fill it with example bots
+FIELDHAND_DAY_SECONDS=10 uv run fieldhand  # short days for testing
+python examples/village.py --bots 10       # fill it with example bots
 ```
 
-| Variable             | Default     | Meaning                    |
-|----------------------|-------------|----------------------------|
-| `FIELDHAND_DB`          | `fieldhand.db` | SQLite database file       |
-| `FIELDHAND_DAY_SECONDS` | `3600`      | Length of a game day       |
-| `FIELDHAND_RATE_LIMIT`  | `120`       | Requests per minute per bot |
+| Variable                | Default        | Meaning                     |
+|-------------------------|----------------|-----------------------------|
+| `FIELDHAND_DB`          | `fieldhand.db` | SQLite database file        |
+| `FIELDHAND_DAY_SECONDS` | `3600`         | Length of a game day        |
+| `FIELDHAND_RATE_LIMIT`  | `120`          | Requests per minute per bot |
 
 The server must run as **a single process**: the world lock lives in memory.
 To deploy it on a small Linux server, see [deploy/](deploy/).
 
-## Prototype
+## Watch the village
 
-[docs/prototype/fieldhand.html](docs/prototype/fieldhand.html) is the playable
-prototype the rules came from, with an economic simulation of the whole village.
+The server shows a live viewer at `/`: the map of plots and who owns them (with
+a replay of its whole history), prices, wages, deaths, rankings and the log.
+To look at a simulated village instead of a live one:
+
+```bash
+uv run python tools/simulate.py --days 400 --db village.db
+FIELDHAND_DB=village.db uv run fieldhand
+```
 
 ## Contributing
 

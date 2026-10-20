@@ -4,15 +4,18 @@ import asyncio
 import contextlib
 import time
 from collections import defaultdict, deque
+from pathlib import Path
 from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
 from . import __version__, config, game
 from .world import World
+
+VIEWER = Path(__file__).with_name("static") / "index.html"
 
 
 class RegisterIn(BaseModel):
@@ -133,7 +136,7 @@ def create_app(world=None):
     def harvest(body: HarvestIn, request: Request, pid: int = Depends(player_id)):
         return play(request, game.harvest, pid, body.plot_id)
 
-    @app.post("/eat", summary="Eat rations. At least 1 a day or you die at close")
+    @app.post("/eat", summary="Eat rations. 2 days in a row without eating kill you")
     def eat(body: EatIn, request: Request, pid: int = Depends(player_id)):
         return play(request, game.eat, pid, body.qty)
 
@@ -171,6 +174,21 @@ def create_app(world=None):
 
         return play(request, rows)
 
+    @app.get("/plots/history", summary="Every change of plot owner, oldest first")
+    def plots_history(request: Request, after_id: int = 0, limit: int = Query(5000, ge=1, le=5000)):
+        def rows(db):
+            return [
+                dict(r)
+                for r in db.execute(
+                    "SELECT l.id, l.day, l.plot_id, pl.name AS owner FROM plot_log l"
+                    " LEFT JOIN players pl ON pl.id = l.owner_id"
+                    " WHERE l.id > ? ORDER BY l.id LIMIT ?",
+                    (after_id, limit),
+                )
+            ]
+
+        return play(request, rows)
+
     @app.get("/ranking", summary="Rankings: life (eaten), wealth or alive (days)")
     def ranking(request: Request, by: Literal["life", "wealth", "alive"] = "life"):
         return play(request, game.ranking, by)
@@ -202,5 +220,9 @@ def create_app(world=None):
             return out
 
         return play(request, rows)
+
+    @app.get("/", include_in_schema=False)
+    def viewer():
+        return FileResponse(VIEWER)
 
     return app
