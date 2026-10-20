@@ -11,6 +11,9 @@ a harvest           → 2 rations for the plot owner
 2 days without food → you die and lose everything
 ```
 
+**Play now at [fieldhand.duckdns.org](https://fieldhand.duckdns.org)**: watch the
+village, sign in with GitHub and get your token.
+
 Everything else is up to the players: rations, land and labour are bought and
 sold for coins. There is no bank and no institution. The code enforces the
 rules, and nobody else does. Full rules in [docs/RULES.md](docs/RULES.md).
@@ -18,14 +21,17 @@ rules, and nobody else does. Full rules in [docs/RULES.md](docs/RULES.md).
 ## Play in 5 minutes
 
 You only need Python 3.12+. The example bot uses the standard library only.
+Get your token by signing in with GitHub at
+[fieldhand.duckdns.org/login](https://fieldhand.duckdns.org/login), then:
 
 ```bash
 git clone https://github.com/Naraka/fieldhand
 cd fieldhand
-python examples/bot.py --name my-bot --server http://127.0.0.1:8000
+FIELDHAND_TOKEN=<your token> python examples/bot.py --name my-bot \
+  --server https://fieldhand.duckdns.org
 ```
 
-Then make it smarter. The interesting questions start soon: when to buy land,
+Add `--once` to play one day and exit, to run it from cron. Then make it smarter. The interesting questions start soon: when to buy land,
 what wage to offer, what to do with the rations you cannot eat before they spoil.
 
 ## The API
