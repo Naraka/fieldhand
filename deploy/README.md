@@ -35,6 +35,32 @@ player per GitHub account:
 
 The app asks GitHub for no permissions: it only reads the public profile.
 
+## Backups
+
+Every day at 04:00 UTC `deploy/backup.sh` saves a compressed copy of the
+database in `/var/lib/fieldhand/backups` and keeps the last 14. Run one now
+with `sudo systemctl start fieldhand-backup`.
+
+To keep copies off the machine as well, for free with Oracle Object Storage:
+
+1. Storage → Buckets → Create bucket `fieldhand-backups` (private).
+2. In the bucket, create a pre-authenticated request for the whole bucket that
+   **only permits object writes**, with a far expiration date.
+3. Put its URL in `/etc/fieldhand.env` as `FIELDHAND_BACKUP_URL=...` (it ends
+   in `/o/`). The URL lets anyone write to the bucket, so keep it secret, but
+   it cannot read, list or delete anything.
+
+To restore a backup:
+
+```bash
+sudo systemctl stop fieldhand-house fieldhand
+gunzip -c fieldhand-YYYYMMDD-HHMMSS.db.gz | sudo -u fieldhand tee /var/lib/fieldhand/fieldhand.db >/dev/null
+sudo rm -f /var/lib/fieldhand/fieldhand.db-wal /var/lib/fieldhand/fieldhand.db-shm
+sudo systemctl start fieldhand fieldhand-house
+```
+
+The world pauses while the server is stopped, so nobody starves meanwhile.
+
 ## House bots
 
 A new village is empty. House bots (`examples/house_bots.py`) keep it alive
@@ -58,6 +84,6 @@ sudo install -m 644 deploy/fieldhand-house.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now fieldhand-house
 ```
 
-- Data: `/var/lib/fieldhand/fieldhand.db`. Back it up with `sqlite3 fieldhand.db ".backup copy.db"`.
+- Data: `/var/lib/fieldhand/fieldhand.db`. It is backed up every day (see below).
 - Logs: `journalctl -u fieldhand -f`.
 - Restarts and crashes pause the world: nobody dies while the server is down.

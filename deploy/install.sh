@@ -32,9 +32,12 @@ curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin s
 
 if [ ! -f /etc/fieldhand.env ]; then
   install -m 600 /dev/null /etc/fieldhand.env
-  printf 'FIELDHAND_GITHUB_CLIENT_ID=\nFIELDHAND_GITHUB_CLIENT_SECRET=\n' > /etc/fieldhand.env
+  printf 'FIELDHAND_GITHUB_CLIENT_ID=\nFIELDHAND_GITHUB_CLIENT_SECRET=\nFIELDHAND_BACKUP_URL=\n' \
+    > /etc/fieldhand.env
 fi
 install -m 644 /opt/fieldhand/deploy/fieldhand.service /etc/systemd/system/fieldhand.service
+install -m 644 /opt/fieldhand/deploy/fieldhand-backup.service /etc/systemd/system/
+install -m 644 /opt/fieldhand/deploy/fieldhand-backup.timer /etc/systemd/system/
 install -m 644 /opt/fieldhand/deploy/Caddyfile /etc/caddy/Caddyfile
 mkdir -p /etc/systemd/system/caddy.service.d
 printf '[Service]\nEnvironment=FIELDHAND_DOMAIN=%s\n' "$FIELDHAND_DOMAIN" \
@@ -51,6 +54,7 @@ fi
 
 systemctl daemon-reload
 systemctl enable --now fieldhand
+systemctl enable --now fieldhand-backup.timer
 systemctl restart caddy
 echo "Fieldhand is running at https://$FIELDHAND_DOMAIN (API docs at /docs)."
 echo "Remember to open ports 80 and 443 in the cloud firewall (Oracle: VCN security list)."

@@ -1,0 +1,15 @@
+[Unit]
+Description=Fieldhand database backup
+
+[Service]
+Type=oneshot
+User=fieldhand
+Environment=FIELDHAND_DB=/var/lib/fieldhand/fieldhand.db
+# FIELDHAND_BACKUP_URL, if set, uploads every backup off the machine.
+EnvironmentFile=-/etc/fieldhand.env
+ExecStart=/opt/fieldhand/deploy/backup.sh
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/fieldhand
+PrivateTmp=true
