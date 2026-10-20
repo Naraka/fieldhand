@@ -1,0 +1,20 @@
+[Unit]
+Description=Fieldhand house bots
+After=fieldhand.service
+Requires=fieldhand.service
+
+[Service]
+User=fieldhand
+WorkingDirectory=/opt/fieldhand/examples
+# house.json maps each bot name to its token: see deploy/README.md.
+ExecStart=/opt/fieldhand/.venv/bin/python house_bots.py --tokens /var/lib/fieldhand/house.json
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/var/lib/fieldhand
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

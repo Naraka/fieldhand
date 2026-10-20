@@ -1,7 +1,9 @@
 # Rules
 
 Fieldhand has no randomness. The server only enforces these rules; the creator does
-not play or intervene.
+not play or intervene. The public server also runs a few **house bots**, named
+`house-*`, so that a new village is not empty. They play by the same rules and
+through the same API as everybody else.
 
 ## The world
 

@@ -67,6 +67,9 @@ FIELDHAND_DAY_SECONDS=10 uv run fieldhand  # short days for testing
 python examples/village.py --bots 10       # fill it with example bots
 ```
 
+`examples/house_bots.py` runs a village of smarter bots with different
+characters, which is what the public server uses to keep a new world alive.
+
 | Variable                         | Default        | Meaning                                  |
 |----------------------------------|----------------|------------------------------------------|
 | `FIELDHAND_DB`                   | `fieldhand.db` | SQLite database file                     |
