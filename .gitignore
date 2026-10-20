@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Game data
+*.db
+*.db-shm
+*.db-wal
+
+# Bot tokens saved by examples/bot.py
+.token-*
+
+# Private notes for Claude Code
+CLAUDE.md
+
+# Editors
+.vscode/
+.idea/
+*.code-workspace
+
+# Simulation output (tools/simulate.py)
+results/

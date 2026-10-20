@@ -1,0 +1,22 @@
+[Unit]
+Description=Fieldhand game server
+After=network.target
+
+[Service]
+User=fieldhand
+WorkingDirectory=/opt/fieldhand
+Environment=FIELDHAND_DB=/var/lib/fieldhand/fieldhand.db
+ExecStart=/opt/fieldhand/.venv/bin/fieldhand --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=2
+# A clean stop saves the heartbeat: the world pauses until the server is back.
+KillSignal=SIGINT
+TimeoutStopSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/fieldhand
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

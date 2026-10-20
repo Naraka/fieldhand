@@ -1,0 +1,830 @@
+<title>Jornal</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..900&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: una columna estrecha tipo libro de cuentas de la finca; la jornada arriba, el mercado debajo, el registro al final */
+:root{
+  --bg:#eef0e6; --surface:#f8f9f2; --ink:#1f2a1c; --muted:#5d6656; --line:#cdd3c0;
+  --field:#3f6b35; --field-soft:#dce8d2; --grain:#b8860b; --grain-soft:#f3e6c4;
+  --danger:#a63d2a; --danger-soft:#f4ddd6;
+  --o1:#2a78d6; --o2:#eb6834; --o3:#1baf7a; --o4:#eda100; --o5:#e87ba4; --o-other:#b3b9a8;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a12; --surface:#1d251a; --ink:#e6ecdc; --muted:#9ba68f; --line:#33402d;
+  --field:#8fc27a; --field-soft:#24341f; --grain:#e0b54a; --grain-soft:#3a3018;
+  --danger:#f08a72; --danger-soft:#3d221b;
+  --o1:#3987e5; --o2:#d95926; --o3:#199e70; --o4:#c98500; --o5:#d55181; --o-other:#46513f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a12; --surface:#1d251a; --ink:#e6ecdc; --muted:#9ba68f; --line:#33402d;
+  --field:#8fc27a; --field-soft:#24341f; --grain:#e0b54a; --grain-soft:#3a3018;
+  --danger:#f08a72; --danger-soft:#3d221b;
+  --o1:#3987e5; --o2:#d95926; --o3:#199e70; --o4:#c98500; --o5:#d55181; --o-other:#46513f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2{font-family:var(--f-display);font-stretch:80%;margin:0;text-wrap:balance}
+h1{font-size:2.4rem;font-weight:900;letter-spacing:-.01em;line-height:1}
+h2{font-size:1.05rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.day{font-family:var(--f-num);font-size:.85rem;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.day b{color:var(--ink);font-size:1.6rem;display:block;letter-spacing:0}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.stat{background:var(--surface);padding:10px 12px;min-width:0}
+.stat span{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.stat b{font-family:var(--f-num);font-size:1.25rem}
+.stat small{display:block;font-size:.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:440px){.stats{grid-template-columns:repeat(2,1fr)}}
+section{display:flex;flex-direction:column;gap:10px}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:4px}
+.pill{font-size:.75rem;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.pill.ok{background:var(--field-soft);color:var(--field)}
+.pill.used{background:var(--grain-soft);color:var(--grain)}
+.pill.bad{background:var(--danger-soft);color:var(--danger)}
+.plots{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.plot{border:1px solid var(--line);border-radius:6px;padding:10px;background:var(--surface);display:flex;flex-direction:column;gap:8px;min-width:0}
+.plot.ripe{background:repeating-linear-gradient(135deg,var(--grain-soft) 0 6px,var(--surface) 6px 12px);border-color:var(--grain)}
+.plot.done{opacity:.75}
+.plot .t{font-family:var(--f-display);font-weight:800;font-stretch:80%;font-size:1rem}
+.rows{display:flex;flex-direction:column;gap:6px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;background:var(--surface);border:1px solid var(--line);border-radius:6px;flex-wrap:wrap}
+.row .lbl{min-width:0;flex:1 1 160px}
+.row .lbl b{font-family:var(--f-num)}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+button{font:inherit;font-weight:700;font-size:.85rem;border-radius:6px;padding:7px 12px;cursor:pointer;border:1px solid var(--field);background:var(--field);color:var(--surface)}
+button.ghost{background:transparent;color:var(--field)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible{outline:3px solid var(--grain);outline-offset:2px}
+.end{width:100%;padding:14px;font-family:var(--f-display);font-stretch:85%;font-size:1.2rem;font-weight:900;letter-spacing:.02em;background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.pantry{display:flex;gap:6px;flex-wrap:wrap}
+.lot{font-family:var(--f-num);font-size:.8rem;padding:4px 8px;border-radius:4px;background:var(--grain-soft);color:var(--ink)}
+.lot.soon{background:var(--danger-soft);color:var(--danger)}
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:.85rem}
+.log li{padding-left:10px;border-left:2px solid var(--line)}
+.log li.me{border-left-color:var(--field)}
+.log li.dead{border-left-color:var(--danger);color:var(--danger)}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+td,th{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line)}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+td.r,th.r{text-align:right}
+tr.me td{font-weight:700;color:var(--field)}
+.notice{border:2px solid var(--danger);background:var(--danger-soft);color:var(--danger);border-radius:8px;padding:12px 14px;font-weight:700}
+.warn{color:var(--danger);font-size:.85rem;font-weight:700}
+details{border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-weight:700}
+details ol{padding-left:20px;margin:8px 0 0;display:flex;flex-direction:column;gap:4px;max-width:65ch}
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+nav.tabs button{background:transparent;color:var(--muted);border:0;border-bottom:3px solid transparent;border-radius:0;padding:8px 12px;font-family:var(--f-display);font-stretch:85%;font-size:1rem;font-weight:800}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--field)}
+.view{display:flex;flex-direction:column;gap:18px}
+.mapbox{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;overflow:hidden}
+#map{width:100%;height:auto;max-height:62vh;display:block;touch-action:manipulation}
+#map rect{cursor:pointer;stroke-width:.06}
+#map rect.free{fill:var(--bg);stroke:var(--muted);stroke-dasharray:.12 .1}
+#map rect.me{fill:var(--field)}
+#map rect.lost{opacity:.4}
+#map rect.pending{stroke:var(--grain);stroke-width:.12}
+#map rect.sel{stroke:var(--ink);stroke-width:.14}
+#map circle.center{fill:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.82rem}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px}
+input[type=range]{width:100%;accent-color:var(--field)}
+.simform{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.simform label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
+.simform input{font:inherit;font-family:var(--f-num);padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);width:100%}
+.charts{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:620px){.charts{grid-template-columns:1fr 1fr}}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;position:relative;min-width:0}
+.chart h3{margin:0 0 2px;font-family:var(--f-display);font-stretch:85%;font-size:.95rem;font-weight:800}
+.chart .sub{font-size:.75rem;color:var(--muted);margin-bottom:4px}
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.chart .grid line{stroke:var(--line);stroke-width:1}
+.chart .ax text{fill:var(--muted);font-family:var(--f-num);font-size:10px}
+.chart path.ln{fill:none;stroke:var(--field);stroke-width:2;stroke-linejoin:round}
+.chart path.ar{fill:var(--field-soft);stroke:none}
+.chart .hov line{stroke:var(--ink);stroke-width:1;stroke-dasharray:3 3}
+.chart .hov circle{fill:var(--field);stroke:var(--surface);stroke-width:2}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:.75rem;padding:4px 8px;border-radius:4px;white-space:nowrap;font-family:var(--f-num);transform:translate(-50%,-110%)}
+.summary{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;max-width:100%}
+.summary p{margin:0;max-width:65ch}
+#simMap{width:100%;height:auto;max-height:60vh;display:block}
+#simMap rect{stroke:none}
+#simMap rect.free{fill:var(--bg);stroke:var(--muted);stroke-width:.05;stroke-dasharray:.12 .1}
+@media (prefers-reduced-motion:no-preference){button{transition:transform .08s}button:active:not(:disabled){transform:translateY(1px)}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Jornal</h1>
+      <div class="muted">Una aldea de 20 bots. Tú acabas de llegar con 100 monedas.</div>
+    </div>
+    <div class="day">Día<b id="dayN" class="num">1</b></div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button id="tabFarm" role="tab" aria-selected="true">Mi granja</button>
+    <button id="tabMap" role="tab" aria-selected="false">Mapa de la aldea</button>
+    <button id="tabSim" role="tab" aria-selected="false">Simulación</button>
+  </nav>
+
+  <div id="viewFarm" class="view">
+  <div id="deadNotice" class="notice" hidden></div>
+
+  <div class="stats" aria-live="polite">
+    <div class="stat"><span>Monedas</span><b id="sCoins">0</b><small id="sCoinsSub">&nbsp;</small></div>
+    <div class="stat"><span>Raciones</span><b id="sFood">0</b><small id="sFoodSub">&nbsp;</small></div>
+    <div class="stat"><span>Parcelas</span><b id="sPlots">0</b><small id="sPlotsSub">&nbsp;</small></div>
+    <div class="stat"><span>Puntuación</span><b id="sScore">0</b><small>raciones comidas</small></div>
+  </div>
+
+  <section>
+    <div class="sec-head"><h2>Tu jornada</h2><span id="jornadaPill" class="pill ok">Disponible</span></div>
+    <div id="jobs" class="rows"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Tus parcelas</h2><span class="muted" id="plotsHint"></span></div>
+    <div id="plots" class="plots"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Despensa</h2><span class="muted">caducan a los 7 días</span></div>
+    <div id="pantry" class="pantry"></div>
+    <div class="row">
+      <div class="lbl">Comer una ración extra. Suma 1 a tu puntuación.</div>
+      <button id="eatBtn" class="ghost">Comer 1 extra</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Mercado</h2><span class="muted">precios del día</span></div>
+    <div class="rows">
+      <div class="row">
+        <div class="lbl">Ración · <b id="mRation">0</b> monedas</div>
+        <div class="btns"><button id="buyR">Comprar 1</button><button id="sellR" class="ghost">Vender 1</button></div>
+      </div>
+      <div class="row">
+        <div class="lbl">Parcela · <b id="mLand">0</b> monedas<br><small class="muted" id="mLandSub"></small></div>
+        <div class="btns"><button id="buyL">Comprar</button><button id="sellL" class="ghost">Vender</button></div>
+      </div>
+      <div class="row">
+        <div class="lbl">Parcelas libres · <b id="mFree">0</b><br><small class="muted">Gratis para el primero que la reclame</small></div>
+        <div class="btns"><button id="claimBtn">Reclamar</button></div>
+      </div>
+      <div class="row">
+        <div class="lbl">Salario de jornalero · <b id="mWage">0</b> monedas<br><small class="muted">Lo paga quien contrata. Las 2 raciones de la cosecha son para el dueño.</small></div>
+      </div>
+    </div>
+  </section>
+
+  <button id="endDay" class="end">Terminar el día</button>
+  <div id="endWarn" class="warn" hidden>No tienes ninguna ración para esta noche. Cómprala en el mercado o, si terminas el día así, mueres y pierdes todo.</div>
+
+  <section>
+    <div class="sec-head"><h2>Lo que ha pasado</h2></div>
+    <ul id="log" class="log"></ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Clasificación</h2>
+      <div class="btns" role="tablist" aria-label="Tipo de clasificación">
+        <button id="rkVida" class="seg" role="tab">Mejor vida</button>
+        <button id="rkRico" class="seg ghost" role="tab">Más rico</button>
+        <button id="rkVivo" class="seg ghost" role="tab">Más tiempo vivo</button>
+      </div></div>
+    <div class="muted" id="rkHint" style="font-size:.85rem"></div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>#</th><th>Granjero</th><th class="r">Parcelas</th><th class="r" id="rkCol">Comido</th></tr></thead>
+      <tbody id="rank"></tbody>
+    </table></div>
+  </section>
+
+  <details>
+    <summary>Reglas</summary>
+    <ol>
+      <li>Al registrarte recibes 100 monedas y se crea una parcela libre.</li>
+      <li>Tienes una jornada al día: cosechar una parcela tuya o trabajar en la de otro.</li>
+      <li>Cada parcela cosechada da 2 raciones. Si nadie la cosecha ese día, la cosecha se pierde.</li>
+      <li>Para cosechar más parcelas tuyas, contratas jornaleros. Se les paga en monedas.</li>
+      <li>Cada noche comes 1 ración. Si no tienes, mueres: pierdes todo, tu tierra queda libre y vuelves sin nada.</li>
+      <li>Las raciones se pudren a los 7 días. Lo que comes es tu puntuación.</li>
+      <li>Raciones y parcelas se compran y venden con monedas.</li>
+    </ol>
+  </details>
+  </div>
+
+  <div id="viewMap" class="view" hidden>
+    <section>
+      <div class="sec-head"><h2>La aldea</h2><span class="muted" id="mapDay"></span></div>
+      <div class="mapbox"><svg id="map" role="img" aria-label="Mapa de las parcelas de la aldea"></svg></div>
+      <div id="mapInfo" class="row"><div class="lbl muted">Toca una parcela para ver de quién es.</div></div>
+      <div id="legend" class="legend"></div>
+      <small class="muted">Las parcelas más antiguas están en el centro; cada registro añade una nueva en el borde. Las parcelas pálidas no se cosecharon ayer.</small>
+    </section>
+    <section>
+      <div class="sec-head"><h2>Historia</h2><span class="muted num" id="histLbl"></span></div>
+      <input type="range" id="histRange" min="0" max="0" value="0" aria-label="Día de la historia">
+      <div class="btns"><button id="playBtn">Reproducir</button><button id="liveBtn" class="ghost">Volver a hoy</button></div>
+    </section>
+  </div>
+
+  <div id="viewSim" class="view" hidden>
+    <section>
+      <div class="sec-head"><h2>Simulación con las reglas finales</h2><span class="muted" id="simStatus">Lista</span></div>
+      <p class="muted" style="margin:0;max-width:65ch">Solo bots. Cada día dura 1 minuto en el juego real: cada bot tiene que comer o muere, y si su programa se cae ese día, también muere. Entran con monedas, se crea una parcela por registro y las raciones caducan a los 7 días.</p>
+      <form id="simForm" class="simform">
+        <label for="cfgN">Bots iniciales<input id="cfgN" type="number" min="10" max="1000" value="200"></label>
+        <label for="cfgD">Días a simular<input id="cfgD" type="number" min="100" max="20000" step="100" value="5000"></label>
+        <label for="cfgS">Monedas al entrar<input id="cfgS" type="number" min="0" max="1000" value="50"></label>
+        <label for="cfgR">Entra un bot cada (días)<input id="cfgR" type="number" min="1" max="10000" value="20"></label>
+        <label for="cfgF">Un bot se cae 1 de cada (días, 0 = nunca)<input id="cfgF" type="number" min="0" max="1000000" value="3000"></label>
+      </form>
+      <button id="simRun">Simular</button>
+    </section>
+    <div id="simOut" hidden>
+      <div class="summary" id="simSummary"></div>
+      <section>
+        <div class="sec-head"><h2>Evolución</h2><span class="muted">pasa el dedo o el ratón por las gráficas</span></div>
+        <div class="charts" id="charts"></div>
+      </section>
+      <section>
+        <div class="sec-head"><h2>Reparto de la tierra</h2><span class="muted num" id="simMapLbl"></span></div>
+        <div class="mapbox"><svg id="simMap" role="img" aria-label="Mapa de parcelas de la simulación"></svg></div>
+        <div id="simLegend" class="legend"></div>
+        <input type="range" id="simRange" min="0" max="0" value="0" aria-label="Día de la simulación">
+        <div class="btns"><button id="simPlay">Reproducir</button></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+const R = 2, SPOIL = 7, START_COINS = 100;
+const NAMES = ["Ramona","Paco","Aurelia","Benito","Consuelo","Eusebio","Filomena","Genaro","Herminia","Isidro","Jacinta","Leandro","Matilde","Nicanor","Obdulia","Prudencio","Remedios","Saturnino","Teodora","Urbano","Valeriana","Wenceslao","Ximena","Zacarías","Amparo","Bartolo","Casilda","Damián","Encarna","Fermín"];
+let S;
+
+function fresh(){
+  const st = {day:1, free:0, p:1.2, w:1.3, nextBot:0, log:[], hiredToday:0, plots:[], hist:[], tick:0, lastH:{}, preDays:30,
+    me:{coins:START_COINS, food:[], parcels:[], score:0, age:0, worked:false, deaths:0},
+    bots:[]};
+  for(let i=0;i<20;i++) addBot(st);
+  // La aldea funciona 30 días antes de que llegues
+  for(let d=0; d<30; d++) botDay(st, true);
+  st.day = 1; st.log = [];
+  st.free += 1; newPlot(st); // tu registro crea una parcela libre
+  st.log.unshift({t:"Llegas a la aldea con 100 monedas. Se ha creado una parcela libre: reclámala antes que nadie.", c:"me"});
+  newDayPrep(st);
+  return st;
+}
+function addBot(st){
+  const i = st.nextBot++;
+  st.bots.push({id:i, name:NAMES[i % NAMES.length] + (i>=NAMES.length?" "+(Math.floor(i/NAMES.length)+1):""),
+    coins:START_COINS, food:[], parcels:0, score:0, age:0, worked:false, filled:0,
+    H:30+(i*37)%120});
+  st.free += 1; newPlot(st);
+}
+const stock = f => f.reduce((s,l)=>s+l.q,0);
+function take(f, qty){
+  let got=0;
+  f.sort((a,b)=>a.exp-b.exp);
+  while(qty>1e-9 && f.length){
+    const l=f[0], t=Math.min(l.q,qty); got+=t; qty-=t; l.q-=t;
+    if(l.q<=1e-9) f.shift();
+  }
+  return got;
+}
+function add(f,q,exp){ if(q>1e-9) f.push({q,exp}); }
+// Posición en espiral cuadrada (solo visual)
+const SP=[[0,0]]; let wx=0,wy=0,wd=0,wl=1,ws=0,wleg=0; const DX=[1,0,-1,0],DY=[0,1,0,-1];
+function pos(i){ while(SP.length<=i){ wx+=DX[wd]; wy+=DY[wd]; SP.push([wx,wy]); ws++; if(ws===wl){ ws=0; wd=(wd+1)%4; wleg++; if(wleg%2===0) wl++; } } return SP[i]; }
+function newPlot(st){ st.plots.push({id:st.plots.length, o:null}); }
+function transfer(st, from, to){ const p = st.plots.find(q=>q.o===from); if(!p) return null; p.o = to; return p.id; }
+function movePlot(st, pid, to){ const p = st.plots[pid]; if(p) p.o = to; }
+function releaseAll(st, o){ st.plots.forEach(p=>{ if(p.o===o) p.o=null; }); }
+function markBot(st, b, n){ st.plots.filter(p=>p.o==="b"+b.id).forEach((p,i)=>{ st.lastH[p.id] = i<n; }); }
+function reconcile(st){
+  for(const b of st.bots){
+    const own = st.plots.filter(p=>p.o==="b"+b.id);
+    for(let k=own.length; k>b.parcels; k--) own[k-1].o = null;
+    for(let k=own.length; k<b.parcels; k++) if(transfer(st,null,"b"+b.id)===null) break;
+  }
+  const mine = new Set(st.me.parcels.map(p=>p.pid));
+  st.plots.forEach(p=>{ if(p.o==="me" && !mine.has(p.id)) p.o=null; });
+  st.me.parcels.forEach(p=>{ if(p.pid==null || !st.plots[p.pid] || st.plots[p.pid].o!=="me"){ const id=transfer(st,null,"me"); if(id!==null) p.pid=id; } });
+  st.free = st.plots.filter(p=>p.o===null).length;
+}
+function recordHist(st){ st.hist.push({t:st.tick, o:st.plots.map(p=>p.o||"").join(",")}); if(st.hist.length>400) st.hist.shift(); }
+function ensurePlots(st){
+  if(st.plots) return;
+  st.plots=[]; st.hist=[]; st.lastH={}; st.preDays=30; st.tick=30+st.day-1;
+  st.bots.forEach(b=>{ for(let k=0;k<b.parcels;k++) st.plots.push({id:st.plots.length,o:"b"+b.id}); });
+  st.me.parcels.forEach(p=>{ p.pid=st.plots.length; st.plots.push({id:st.plots.length,o:"me"}); });
+  for(let k=0;k<st.free;k++) st.plots.push({id:st.plots.length,o:null});
+  recordHist(st);
+}
+const landPrice = st => Math.max(5, (R - st.w) * st.p * 50);
+function landless(st){ return st.bots.filter(b=>b.parcels===0 && !b.worked); }
+
+// Ofertas de trabajo para ti: parcelas de bots que sus jornaleros no van a cubrir
+function openJobs(st){
+  const owners = st.bots.filter(b=>b.parcels>1 && b.coins>=st.w*st.p).map(b=>({b, extra:b.parcels-1-b.filled}));
+  let supply = landless(st).length;
+  const jobs = [];
+  owners.sort((a,c)=>c.extra-a.extra);
+  let demand = owners.reduce((s,o)=>s+o.extra,0);
+  let open = Math.max(0, demand - supply);
+  for(const o of owners){
+    if(open<=0) break;
+    const n = Math.min(o.extra, open);
+    if(n>0){ jobs.push(o.b); open -= n; }
+  }
+  return jobs;
+}
+
+function botDay(st, silent){
+  const day = st.day;
+  // Bots sin tierra reclaman parcelas libres
+  for(const b of st.bots){ if(st.free<=0) break; if(b.parcels===0){ b.parcels=1; st.free--; transfer(st,null,"b"+b.id); if(!silent) logIt(st,`${b.name} reclama una parcela libre.`); } }
+  // Cosecha propia
+  const exp = day + SPOIL;
+  for(const b of st.bots){ if(b.parcels>0){ add(b.food,R,exp); } }
+  // Jornaleros bot
+  const pool = landless(st);
+  let demandTotal = 0;
+  for(const b of st.bots){
+    let extra = b.parcels - 1 - b.filled;
+    const wage = st.w * st.p;
+    while(extra>0 && pool.length && b.coins >= wage){
+      const wk = pool.shift(); wk.worked = true;
+      wk.coins += wage; b.coins -= wage; add(b.food, R, exp); extra--;
+    }
+    markBot(st, b, b.parcels - Math.max(extra,0));
+    demandTotal += Math.max(0, b.parcels-1);
+  }
+  const workersTotal = st.bots.filter(b=>b.parcels===0).length + st.hiredToday;
+  // Ajuste de salario por escasez o exceso de jornaleros
+  if(demandTotal > workersTotal) st.w = Math.min(1.9, st.w + 0.04);
+  else if(demandTotal < workersTotal) st.w = Math.max(1.05, st.w - 0.04);
+  // Mercado de raciones entre bots
+  let D=0, Sp=0; const dem=[], sup=[];
+  for(const b of st.bots){
+    const have = stock(b.food), base = 3;
+    if(have < base){ const q = Math.min(base-have, b.coins/st.p); if(q>0){ dem.push([b,q]); D+=q; } }
+    else if(have > base){ const q=(have-base)*0.8; sup.push([b,q]); Sp+=q; }
+  }
+  const tr = Math.min(D,Sp);
+  if(tr>0){
+    for(const [b,q] of sup){ const g = take(b.food, q*tr/Sp); b.coins += g*st.p; }
+    for(const [b,q] of dem){ const g=q*tr/D; add(b.food, g, exp); b.coins -= g*st.p; }
+  }
+  if(D+Sp>0) st.p = Math.max(0.05, st.p * (1 + 0.25*(D-Sp)/(D+Sp)));
+  // Mercado de tierra: el más impaciente vende al más paciente
+  const L = landPrice(st);
+  const sellers = st.bots.filter(b=>b.parcels>0 && b.H<60).sort((a,b)=>a.H-b.H);
+  const buyers = st.bots.filter(b=>b.H>100 && b.coins>=L+10*st.p).sort((a,b)=>b.H-a.H);
+  if(sellers.length && buyers.length && sellers[0]!==buyers[0]){
+    const s=sellers[0], bu=buyers[0];
+    s.parcels--; bu.parcels++; s.coins+=L; bu.coins-=L; transfer(st,"b"+s.id,"b"+bu.id);
+    if(!silent) logIt(st, `${s.name} vende una parcela a ${bu.name} por ${L.toFixed(0)} monedas.`);
+  }
+  // Comer y morir
+  for(const b of st.bots){
+    const e = take(b.food,1);
+    if(e < 1-1e-9){
+      st.free += b.parcels; releaseAll(st,"b"+b.id);
+      if(!silent) logIt(st, `${b.name} no tenía qué comer y ha muerto. Deja ${b.parcels} parcela${b.parcels===1?"":"s"} libre${b.parcels===1?"":"s"}.`, "dead");
+      b.coins=0; b.food=[]; b.parcels=0; b.age=0;
+    } else {
+      const extra = take(b.food, Math.max(stock(b.food)-2,0)*0.5);
+      b.score += e + extra; b.age = (b.age||0) + 1;
+    }
+    b.food = b.food.filter(l=>l.exp>day);
+    b.worked=false; b.filled=0;
+  }
+  // Registro de un bot nuevo cada 3 días
+  if(day % 3 === 0){ addBot(st); if(!silent) logIt(st, `Se registra ${st.bots[st.bots.length-1].name}. Aparece una parcela libre.`); }
+  st.hiredToday = 0;
+  st.tick++; reconcile(st); recordHist(st);
+  st.day++;
+}
+function newDayPrep(st){
+  st.me.worked=false;
+  st.me.parcels.forEach(p=>p.harvested=false);
+}
+function logIt(st,t,c){ st.log.unshift({t:`Día ${st.day}: ${t}`, c:c||""}); st.log = st.log.slice(0,40); }
+
+// ---- Acciones del jugador ----
+const A = {
+  harvest(i){ const m=S.me, p=m.parcels[i]; if(m.worked||!p||p.harvested) return;
+    add(m.food,R,S.day+SPOIL); p.harvested=true; m.worked=true; logIt(S,`Cosechas tu parcela ${i+1}: +2 raciones.`,"me"); },
+  hire(i){ const m=S.me, p=m.parcels[i]; const pool=landless(S); const wage=S.w*S.p;
+    if(!p||p.harvested||!pool.length||m.coins<wage) return;
+    const wk=pool[0]; wk.worked=true; S.hiredToday++;
+    m.coins-=wage; wk.coins+=wage; add(m.food,R,S.day+SPOIL); p.harvested=true;
+    logIt(S,`Contratas a ${wk.name} por ${wage.toFixed(2)} monedas. Cosecha tu parcela ${i+1}: +2 raciones para ti.`,"me"); },
+  work(id){ const m=S.me; if(m.worked) return; const b=S.bots.find(x=>x.id===id); if(!b) return;
+    const wage=S.w*S.p; if(b.coins<wage) return;
+    b.filled++; m.worked=true; m.coins+=wage; b.coins-=wage; add(b.food,R,S.day+SPOIL);
+    logIt(S,`Trabajas en la parcela de ${b.name}. Cobras ${wage.toFixed(2)} monedas.`,"me"); },
+  buyR(){ const m=S.me, price=S.p*1.05; if(m.coins<price) return; m.coins-=price; add(m.food,1,S.day+SPOIL); S.p*=1.01; },
+  sellR(){ const m=S.me; if(stock(m.food)<1) return; take(m.food,1); m.coins+=S.p*0.95; S.p*=0.99; },
+  buyL(){ const m=S.me, L=landPrice(S); const s=S.bots.filter(b=>b.parcels>0 && b.H<90).sort((a,b)=>a.H-b.H)[0];
+    if(!s||m.coins<L) return; s.parcels--; s.coins+=L; m.coins-=L; const pid=transfer(S,"b"+s.id,"me"); m.parcels.push({harvested:false,pid});
+    logIt(S,`Compras una parcela a ${s.name} por ${L.toFixed(0)} monedas.`,"me"); },
+  sellL(){ const m=S.me, L=landPrice(S)*0.97; const bu=S.bots.filter(b=>b.coins>=L+5).sort((a,b)=>b.H-a.H)[0];
+    if(!bu||!m.parcels.length) return; let idx=m.parcels.findIndex(p=>p.harvested); if(idx<0) idx=m.parcels.length-1;
+    const gone=m.parcels.splice(idx,1)[0]; if(gone.pid!=null) movePlot(S,gone.pid,"b"+bu.id); else transfer(S,"me","b"+bu.id); bu.parcels++; bu.coins-=L; m.coins+=L;
+    logIt(S,`Vendes una parcela a ${bu.name} por ${L.toFixed(0)} monedas.`,"me"); },
+  claim(){ if(S.free<=0) return; const pid=transfer(S,null,"me"); if(pid===null) return; S.free--; S.me.parcels.push({harvested:false,pid}); logIt(S,"Reclamas una parcela libre.","me"); },
+  eat(){ const m=S.me; if(stock(m.food)<2) return; take(m.food,1); m.score+=1; },
+  end(){
+    const m=S.me, today=S.day;
+    botDay(S,false);
+    const e = take(m.food,1);
+    if(e < 1-1e-9){
+      S.free += m.parcels.length; m.deaths++; releaseAll(S,"me");
+      S.log.unshift({t:`Día ${today}: No tenías qué comer. Has muerto. Lo pierdes todo y vuelves sin nada.`, c:"dead"});
+      m.coins=0; m.food=[]; m.parcels=[]; m.age=0;
+      S.deadMsg = `Moriste de hambre el día ${today}. Has vuelto sin monedas, sin raciones y sin tierra. Busca jornal para comer hoy.`;
+    } else { m.score+=e; m.age=(m.age||0)+1; S.deadMsg=null; }
+    m.food = m.food.filter(l=>l.exp>today);
+    newDayPrep(S);
+  }
+};
+
+// ---- Pintado ----
+const $ = id => document.getElementById(id);
+const f2 = n => n.toFixed(2), f0 = n => Math.round(n).toString();
+function render(){
+  if(view==="map") renderMap();
+  const m=S.me, st=stock(m.food), L=landPrice(S);
+  $("dayN").textContent = S.day;
+  $("sCoins").textContent = f0(m.coins);
+  $("sCoinsSub").textContent = `≈ ${f0(m.coins/S.p)} raciones`;
+  $("sFood").textContent = f2(st);
+  const soon = m.food.filter(l=>l.exp<=S.day+1).reduce((s,l)=>s+l.q,0);
+  $("sFoodSub").textContent = soon>0 ? `${f2(soon)} se pudren mañana` : "nada caduca mañana";
+  $("sPlots").textContent = m.parcels.length;
+  const pend = m.parcels.filter(p=>!p.harvested).length;
+  $("sPlotsSub").textContent = pend ? `${pend} sin cosechar` : (m.parcels.length? "todas cosechadas" : "sin tierra");
+  $("sScore").textContent = f2(m.score);
+
+  const dn=$("deadNotice"); dn.hidden=!S.deadMsg; dn.textContent=S.deadMsg||"";
+
+  const pill=$("jornadaPill"); pill.textContent = m.worked?"Ya trabajaste hoy":"Disponible"; pill.className="pill "+(m.worked?"used":"ok");
+
+  // Trabajos
+  const jobs=$("jobs"); jobs.innerHTML="";
+  const ownIdx = m.parcels.findIndex(p=>!p.harvested);
+  if(ownIdx>=0){
+    jobs.append(rowEl(`Cosechar tu parcela ${ownIdx+1}`, `+2 raciones para ti`, [["Cosechar", ()=>A.harvest(ownIdx), m.worked]]));
+  }
+  const offers = openJobs(S);
+  offers.slice(0,3).forEach(b=>{
+    jobs.append(rowEl(`Trabajar para ${b.name}`, `Cobras ${f2(S.w*S.p)} monedas · tiene ${b.parcels} parcelas`, [["Trabajar", ()=>A.work(b.id), m.worked]], true));
+  });
+  if(ownIdx<0 && !offers.length){
+    const d=document.createElement("div"); d.className="row";
+    d.innerHTML = `<div class="lbl muted">${m.worked?"Ya has usado tu jornada de hoy.":"Hoy nadie busca jornaleros y no tienes parcela que cosechar. Reclama una libre o compra una."}</div>`;
+    jobs.append(d);
+  }
+
+  // Parcelas
+  const pl=$("plots"); pl.innerHTML="";
+  const pool = landless(S).length;
+  $("plotsHint").textContent = m.parcels.length ? `${pool} jornalero${pool===1?"":"s"} libre${pool===1?"":"s"} hoy` : "";
+  if(!m.parcels.length){ const d=document.createElement("div"); d.className="muted"; d.textContent="Aún no tienes tierra."; pl.append(d); }
+  m.parcels.forEach((p,i)=>{
+    const d=document.createElement("div"); d.className="plot "+(p.harvested?"done":"ripe");
+    d.innerHTML = `<div class="t">Parcela ${i+1}</div><div class="muted" style="font-size:.8rem">${p.harvested?"Cosechada hoy":"Lista para cosechar"}</div>`;
+    if(!p.harvested){
+      const b=document.createElement("button"); b.className="ghost"; b.textContent=`Contratar (${f2(S.w*S.p)} mon)`;
+      b.disabled = !pool || m.coins < S.w*S.p; b.onclick=()=>{A.hire(i); save(); render();};
+      d.append(b);
+    }
+    pl.append(d);
+  });
+
+  // Despensa
+  const pa=$("pantry"); pa.innerHTML="";
+  const byExp={}; m.food.forEach(l=>{byExp[l.exp]=(byExp[l.exp]||0)+l.q;});
+  const keys=Object.keys(byExp).map(Number).sort((a,b)=>a-b);
+  if(!keys.length){ const s=document.createElement("span"); s.className="muted"; s.textContent="Vacía."; pa.append(s); }
+  keys.forEach(k=>{ const s=document.createElement("span"); const left=k-S.day;
+    s.className="lot"+(left<=1?" soon":""); s.textContent=`${f2(byExp[k])} · ${left<=0?"hoy":left===1?"1 día":left+" días"}`; pa.append(s); });
+  $("eatBtn").disabled = st<2;
+
+  // Mercado
+  $("mRation").textContent = f2(S.p*1.05) + " / " + f2(S.p*0.95);
+  $("mLand").textContent = f0(L);
+  $("mLandSub").textContent = `Una parcela con jornalero deja ${f2((R-S.w)*S.p)} monedas al día`;
+  $("mFree").textContent = S.free;
+  $("mWage").textContent = f2(S.w*S.p);
+  $("buyR").disabled = m.coins < S.p*1.05;
+  $("sellR").disabled = st < 1;
+  $("buyL").disabled = m.coins < L || !S.bots.some(b=>b.parcels>0 && b.H<90);
+  $("sellL").disabled = !m.parcels.length;
+  $("claimBtn").disabled = S.free<=0;
+  $("endWarn").hidden = st >= 1;
+
+  // Registro
+  const lg=$("log"); lg.innerHTML="";
+  S.log.slice(0,12).forEach(e=>{ const li=document.createElement("li"); li.textContent=e.t; if(e.c) li.className=e.c; lg.append(li); });
+
+  // Clasificación
+  const worth = (coins,parcels,food) => coins + parcels*L + food*S.p;
+  const RK = {
+    vida:{col:"Comido", hint:"Raciones comidas en total. Es tu nivel de vida.", v:x=>x.s},
+    rico:{col:"Patrimonio", hint:"Monedas, más tus parcelas y raciones al precio de hoy.", v:x=>x.w},
+    vivo:{col:"Días", hint:"Días seguidos sin morir de hambre.", v:x=>x.a}
+  };
+  const cur = RK[rankBy];
+  $("rkCol").textContent = cur.col; $("rkHint").textContent = cur.hint;
+  [["rkVida","vida"],["rkRico","rico"],["rkVivo","vivo"]].forEach(([id,k])=>{
+    const b=$(id); b.className = "seg" + (k===rankBy ? "" : " ghost"); b.setAttribute("aria-selected", k===rankBy); });
+  const all = S.bots.map(b=>({n:b.name,p:b.parcels,s:b.score,a:b.age||0,w:worth(b.coins,b.parcels,stock(b.food)),me:false}))
+    .concat([{n:"Tú",p:m.parcels.length,s:m.score,a:m.age||0,w:worth(m.coins,m.parcels.length,st),me:true}])
+    .sort((a,b)=>cur.v(b)-cur.v(a));
+  const myPos = all.findIndex(x=>x.me);
+  const rows = all.slice(0,6); if(myPos>=6) rows.push(all[myPos]);
+  const rk=$("rank"); rk.innerHTML="";
+  rows.forEach(r=>{ const pos=all.indexOf(r)+1; const tr=document.createElement("tr"); if(r.me) tr.className="me";
+    tr.innerHTML=`<td class="num">${pos}</td><td>${r.n}</td><td class="r num">${r.p}</td><td class="r num">${f0(cur.v(r))}</td>`; rk.append(tr); });
+}
+let view="farm", histIdx=null, sel=null, playTimer=null;
+const OWN_COLORS=["var(--o1)","var(--o2)","var(--o3)","var(--o4)","var(--o5)"];
+const SVGNS="http://www.w3.org/2000/svg";
+function ownerName(o){ if(o==="me") return "Tú"; if(!o) return null; const b=S.bots.find(x=>"b"+x.id===o); return b?b.name:"?"; }
+function histLabel(t){ return t<=S.preDays ? `Antes de tu llegada · día ${t}` : `Final de tu día ${t-S.preDays}`; }
+function renderMap(){
+  const live = histIdx===null;
+  const owners = live ? S.plots.map(p=>p.o) : S.hist[histIdx].o.split(",").map(x=>x||null);
+  const counts = {}; owners.forEach(o=>{ if(o && o!=="me") counts[o]=(counts[o]||0)+1; });
+  const top = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>e[0]);
+  const svg=$("map"); svg.innerHTML="";
+  let minX=0,minY=0,maxX=0,maxY=0;
+  owners.forEach((o,i)=>{ const [x,y]=pos(i); minX=Math.min(minX,x); minY=Math.min(minY,y); maxX=Math.max(maxX,x); maxY=Math.max(maxY,y); });
+  svg.setAttribute("viewBox", `${minX-0.6} ${minY-0.6} ${maxX-minX+2.2} ${maxY-minY+2.2}`);
+  const myHarv = {}; S.me.parcels.forEach(p=>{ if(p.pid!=null) myHarv[p.pid]=p.harvested; });
+  owners.forEach((o,i)=>{
+    const [x,y]=pos(i); const r=document.createElementNS(SVGNS,"rect");
+    r.setAttribute("x",x+0.06); r.setAttribute("y",y+0.06); r.setAttribute("width",0.88); r.setAttribute("height",0.88); r.setAttribute("rx",0.08);
+    let cls=[];
+    if(!o) cls.push("free");
+    else if(o==="me"){ cls.push("me"); if(live && myHarv[i]===false) cls.push("pending"); }
+    else { const k=top.indexOf(o); r.style.fill = k>=0 ? OWN_COLORS[k] : "var(--o-other)"; if(live && S.lastH[i]===false) cls.push("lost"); }
+    if(sel===i) cls.push("sel");
+    r.setAttribute("class",cls.join(" "));
+    r.addEventListener("click",()=>{ sel=i; renderMap(); });
+    const t=document.createElementNS(SVGNS,"title"); t.textContent = o ? `Parcela ${i+1} · ${ownerName(o)}` : `Parcela ${i+1} · libre`; r.append(t);
+    svg.append(r);
+  });
+  // Info de la parcela seleccionada
+  const info=$("mapInfo");
+  if(sel!==null && sel<owners.length){
+    const o=owners[sel]; let txt;
+    if(!o) txt = live ? `Parcela ${sel+1}: libre. Puedes reclamarla desde Mi granja.` : `Parcela ${sel+1}: libre en ese momento.`;
+    else {
+      const n = owners.filter(x=>x===o).length;
+      let st = "";
+      if(live && o==="me") st = myHarv[sel] ? " Cosechada hoy." : " Sin cosechar hoy.";
+      else if(live) st = S.lastH[sel]===false ? " Ayer no se cosechó." : " Ayer se cosechó.";
+      txt = `Parcela ${sel+1}: de ${ownerName(o)}, que tiene ${n} parcela${n===1?"":"s"}.${st}`;
+    }
+    info.innerHTML = `<div class="lbl">${txt}</div>`;
+  } else info.innerHTML = `<div class="lbl muted">Toca una parcela para ver de quién es.</div>`;
+  // Leyenda
+  const lg=$("legend"); lg.innerHTML="";
+  const mine = owners.filter(x=>x==="me").length;
+  const item=(color,label,extra)=>{ const s=document.createElement("span"); s.innerHTML=`<i style="background:${color};${extra||""}"></i>${label}`; lg.append(s); };
+  item("var(--field)", `Tú · ${mine}`);
+  top.forEach((o,k)=>item(OWN_COLORS[k], `${ownerName(o)} · ${counts[o]}`));
+  const others = Object.entries(counts).filter(([o])=>!top.includes(o)).reduce((s,[,c])=>s+c,0);
+  if(others) item("var(--o-other)", `Otros · ${others}`);
+  item("var(--bg)", `Libres · ${owners.filter(x=>!x).length}`, "border:1px dashed var(--muted)");
+  // Historia
+  const rg=$("histRange"); rg.max = Math.max(S.hist.length-1,0);
+  if(live){ rg.value = rg.max; }
+  $("histLbl").textContent = live ? "Hoy" : histLabel(S.hist[histIdx].t);
+  $("mapDay").textContent = `${owners.length} parcelas · ${new Set(owners.filter(Boolean)).size} propietarios`;
+}
+function setView(v){
+  view=v; $("viewFarm").hidden = v!=="farm"; $("viewMap").hidden = v!=="map"; $("viewSim").hidden = v!=="sim";
+  $("tabFarm").setAttribute("aria-selected", v==="farm"); $("tabMap").setAttribute("aria-selected", v==="map"); $("tabSim").setAttribute("aria-selected", v==="sim");
+  if(v==="map") renderMap();
+}
+function stopPlay(){ if(playTimer){ clearInterval(playTimer); playTimer=null; $("playBtn").textContent="Reproducir"; } }
+function rowEl(title, sub, buttons, ghost){
+  const d=document.createElement("div"); d.className="row";
+  const l=document.createElement("div"); l.className="lbl"; l.innerHTML=`<strong>${title}</strong><br><small class="muted">${sub}</small>`;
+  const bs=document.createElement("div"); bs.className="btns";
+  buttons.forEach(([t,fn,dis])=>{ const b=document.createElement("button"); if(ghost) b.className="ghost"; b.textContent=t; b.disabled=!!dis; b.onclick=()=>{fn(); save(); render();}; bs.append(b); });
+  d.append(l,bs); return d;
+}
+function bind(id,fn){ $(id).onclick=()=>{fn(); save(); render();}; }
+bind("eatBtn",A.eat); bind("buyR",A.buyR); bind("sellR",A.sellR); bind("buyL",A.buyL); bind("sellL",A.sellL); bind("claimBtn",A.claim);
+let rankBy = "vida";
+$("tabFarm").onclick=()=>{ stopPlay(); setView("farm"); };
+$("tabMap").onclick=()=>setView("map");
+$("tabSim").onclick=()=>{ stopPlay(); setView("sim"); };
+$("histRange").oninput=e=>{ stopPlay(); const v=+e.target.value; histIdx = v>=S.hist.length-1 ? null : v; renderMap(); };
+$("liveBtn").onclick=()=>{ stopPlay(); histIdx=null; renderMap(); };
+$("playBtn").onclick=()=>{
+  if(playTimer){ stopPlay(); return; }
+  if(!S.hist.length) return;
+  histIdx = 0; $("playBtn").textContent="Pausa"; renderMap();
+  const fast = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 400 : 140;
+  playTimer = setInterval(()=>{ if(histIdx===null || histIdx>=S.hist.length-1){ stopPlay(); histIdx=null; renderMap(); return; } histIdx++; renderMap(); }, fast);
+};
+$("rkVida").onclick=()=>{rankBy="vida"; render();};
+$("rkRico").onclick=()=>{rankBy="rico"; render();};
+$("rkVivo").onclick=()=>{rankBy="vivo"; render();};
+bind("endDay",()=>{ A.end(); window.scrollTo({top:0,behavior:"smooth"}); });
+
+
+// ================= Simulación con las reglas finales =================
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+let simRes=null, simPlayT=null;
+function runSim(cfg, onDone){
+  const rng = mulberry32(20261020);
+  const A=[], plots=[]; let p=1.0, w=1.3;
+  const M={price:[],wage:[],top10:[],deaths:[],owners:[],alive:[]};
+  let dHunger=0, dDown=0; const snaps=[];
+  const addAgent=()=>{ const i=A.length; A.push({id:i,coins:cfg.S,food:[],parcels:0,score:0,H:30+(i*37)%120,beta:0.02+((i*13)%10)/100}); plots.push(-1); };
+  for(let i=0;i<cfg.N;i++) addAgent();
+  const die=(a)=>{ for(let j=0;j<plots.length;j++) if(plots[j]===a.id) plots[j]=-1; a.coins=0; a.food=[]; a.parcels=0; };
+  const moveOne=(from,to)=>{ for(let j=plots.length-1;j>=0;j--) if(plots[j]===from){ plots[j]=to; return; } };
+  let day=0;
+  const step=()=>{
+    const end=Math.min(cfg.D, day+60);
+    for(; day<end; day++){
+      if(day>0 && day%cfg.R===0) addAgent();
+      // Reclamar tierra libre
+      let fi=0;
+      for(const a of A){ if(a.parcels===0){ while(fi<plots.length && plots[fi]!==-1) fi++; if(fi>=plots.length) break; plots[fi]=a.id; a.parcels=1; } }
+      // Mercado de tierra: el impaciente vende al paciente
+      const rent=Math.max(R*p-w,0);
+      const holders=A.filter(a=>a.parcels>0).sort((x,y)=>x.H-y.H);
+      const buyers=A.slice().sort((x,y)=>y.H-x.H);
+      for(const sl of holders){
+        let tries=0;
+        for(const b of buyers){
+          if(++tries>25) break;
+          if(b===sl||sl.parcels===0) continue;
+          if(b.H<=sl.H+20) break;
+          const price=rent*(sl.H+b.H)/2;
+          if(price<=0||b.coins<price+10*p) continue;
+          sl.parcels--; b.parcels++; b.coins-=price; sl.coins+=price; moveOne(sl.id,b.id); break;
+        }
+      }
+      // Trabajo y cosecha (salario en monedas)
+      const workers=A.filter(a=>a.parcels===0);
+      const jobs=A.reduce((t,a)=>t+Math.max(a.parcels-1,0),0);
+      w=Math.min(Math.max(w,p*1.0001),R*p);
+      const exp=day+SPOIL;
+      for(const a of A) if(a.parcels>=1) a.food.push({q:R,exp});
+      let wi=0;
+      for(const o of A){ for(let k=0;k<o.parcels-1;k++){ if(wi>=workers.length||o.coins<w) break; const wk=workers[wi++]; o.coins-=w; wk.coins+=w; o.food.push({q:R,exp}); } }
+      // El salario baja si quedan jornaleros sin contratar y sube si sobran parcelas sin jornalero
+      if(wi<workers.length) w*=0.97; else if(jobs>wi) w*=1.03;
+      // Mercado de raciones
+      let Dm=0,Sp=0; const dem=[],sup=[];
+      for(const a of A){
+        const have=stock(a.food), base=3, extra=a.beta*Math.max(a.coins-5*p,0)/p;
+        if(have<base+extra){ const q=Math.min(base+extra-have,a.coins/p); if(q>0){dem.push([a,q]);Dm+=q;} }
+        if(have>base){ const q=(have-base)*0.8; sup.push([a,q]); Sp+=q; }
+      }
+      const tr=Math.min(Dm,Sp);
+      if(tr>0){ for(const [a,q] of sup){ const g=take(a.food,q*tr/Sp); a.coins+=g*p; } for(const [a,q] of dem){ const g=q*tr/Dm; a.food.push({q:g,exp}); a.coins-=g*p; } }
+      if(Dm+Sp>0) p=Math.max(0.01,p*(1+0.3*(Dm-Sp)/(Dm+Sp)));
+      // Comer (acción obligatoria) o morir
+      let dh=0, dd=0;
+      for(const a of A){
+        if(cfg.F>0 && rng()<1/cfg.F){ dd++; die(a); continue; }
+        const e=take(a.food,1);
+        if(e<1-1e-9){ dh++; die(a); continue; }
+        a.score+=e+take(a.food,Math.max(stock(a.food)-2,0)*0.5);
+        a.food=a.food.filter(l=>l.exp>day);
+      }
+      dHunger+=dh; dDown+=dd;
+      // Métricas
+      const parc=A.map(a=>a.parcels).sort((x,y)=>y-x); const totP=parc.reduce((t,x)=>t+x,0);
+      const k=Math.max(1,Math.round(A.length/10));
+      M.price.push(p); M.wage.push(w/p); M.deaths.push(dh+dd);
+      M.top10.push(totP? 100*parc.slice(0,k).reduce((t,x)=>t+x,0)/totP : 0);
+      M.owners.push(100*A.filter(a=>a.parcels>0).length/A.length); M.alive.push(A.length);
+      if(day%10===0||day===cfg.D-1) snaps.push({d:day, o:plots.slice()});
+    }
+    $("simStatus").textContent = `Día ${day} de ${cfg.D}`;
+    if(day<cfg.D) setTimeout(step,0); else onDone({M,snaps,dHunger,dDown,A,cfg});
+  };
+  step();
+}
+function niceTicks(lo,hi,n){ if(hi<=lo){ hi=lo+1; } const span=hi-lo, st=Math.pow(10,Math.floor(Math.log10(span/n))); const err=span/n/st; const m=err>=7.5?10:err>=3.5?5:err>=1.5?2:1; const s=m*st; const t=[]; for(let v=Math.ceil(lo/s)*s; v<=hi+1e-9; v+=s) t.push(+v.toFixed(6)); return t; }
+function lineChart(host, title, sub, data, fmt, opts={}){
+  const W=560,H=170,L=42,Rt=10,T=10,B=24;
+  const n=data.length, stepN=Math.max(1,Math.floor(n/560));
+  const pts=[]; for(let i=0;i<n;i+=stepN){ pts.push([i,data[i]]); } if(pts[pts.length-1][0]!==n-1) pts.push([n-1,data[n-1]]);
+  let lo=opts.min!=null?opts.min:Math.min(...data), hi=opts.max!=null?opts.max:Math.max(...data);
+  if(opts.min==null){ const pad=(hi-lo)*0.1||Math.abs(hi)*0.1||1; lo-=pad; hi+=pad; if(opts.floor0) lo=Math.max(0,lo); }
+  const ticks=niceTicks(lo,hi,3); lo=Math.min(lo,ticks[0]); hi=Math.max(hi,ticks[ticks.length-1]);
+  const X=i=>L+(W-L-Rt)*i/Math.max(1,n-1), Y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  const box=document.createElement("div"); box.className="chart";
+  box.innerHTML=`<h3>${title}</h3><div class="sub">${sub}</div>`;
+  const svg=document.createElementNS(SVGNS,"svg"); svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.setAttribute("role","img"); svg.setAttribute("aria-label",title);
+  let g=`<g class="grid">`+ticks.map(t=>`<line x1="${L}" x2="${W-Rt}" y1="${Y(t)}" y2="${Y(t)}"/>`).join("")+`</g>`;
+  g+=`<g class="ax">`+ticks.map(t=>`<text x="${L-6}" y="${Y(t)+3}" text-anchor="end">${fmt(t)}</text>`).join("");
+  const xt=[0,Math.floor((n-1)/2),n-1]; g+=xt.map(i=>`<text x="${X(i)}" y="${H-6}" text-anchor="${i===0?"start":i===n-1?"end":"middle"}">día ${i}</text>`).join("")+`</g>`;
+  const d=pts.map(([i,v],k)=>`${k?"L":"M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join("");
+  if(opts.area) g+=`<path class="ar" d="${d}L${X(n-1)},${Y(lo)}L${X(0)},${Y(lo)}Z"/>`;
+  g+=`<path class="ln" d="${d}"/><g class="hov" visibility="hidden"><line y1="${T}" y2="${H-B}"/><circle r="4"/></g>`;
+  g+=`<rect class="hit" x="${L}" y="0" width="${W-L-Rt}" height="${H}" fill="transparent"/>`;
+  svg.innerHTML=g; box.append(svg);
+  const tip=document.createElement("div"); tip.className="tip"; tip.hidden=true; box.append(tip);
+  const hov=svg.querySelector(".hov"), hl=hov.querySelector("line"), hc=hov.querySelector("circle");
+  const move=e=>{ const r=svg.getBoundingClientRect(); const x=(e.clientX-r.left)*W/r.width; let i=Math.round((x-L)/(W-L-Rt)*(n-1)); i=Math.max(0,Math.min(n-1,i));
+    hov.setAttribute("visibility","visible"); hl.setAttribute("x1",X(i)); hl.setAttribute("x2",X(i)); hc.setAttribute("cx",X(i)); hc.setAttribute("cy",Y(data[i]));
+    tip.hidden=false; tip.textContent=`Día ${i}: ${fmt(data[i])}`; tip.style.left=(X(i)*r.width/W+ (r.left-box.getBoundingClientRect().left))+"px"; tip.style.top=(Y(data[i])*r.height/H+(r.top-box.getBoundingClientRect().top))+"px"; };
+  const leave=()=>{ hov.setAttribute("visibility","hidden"); tip.hidden=true; };
+  svg.addEventListener("pointermove",move); svg.addEventListener("pointerdown",move); svg.addEventListener("pointerleave",leave);
+  host.append(box);
+}
+const movAvg=(a,k)=>{ const o=[]; let s=0; for(let i=0;i<a.length;i++){ s+=a[i]; if(i>=k) s-=a[i-k]; o.push(s/Math.min(i+1,k)); } return o; };
+function renderSimMap(idx){
+  const sn=simRes.snaps[idx], own=sn.o;
+  const counts={}; own.forEach(o=>{ if(o>=0) counts[o]=(counts[o]||0)+1; });
+  const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>+e[0]);
+  const svg=$("simMap"); svg.innerHTML="";
+  let minX=0,minY=0,maxX=0,maxY=0; own.forEach((o,i)=>{ const [x,y]=pos(i); minX=Math.min(minX,x); minY=Math.min(minY,y); maxX=Math.max(maxX,x); maxY=Math.max(maxY,y); });
+  svg.setAttribute("viewBox",`${minX-0.6} ${minY-0.6} ${maxX-minX+2.2} ${maxY-minY+2.2}`);
+  let html="";
+  own.forEach((o,i)=>{ const [x,y]=pos(i); const k=top.indexOf(o);
+    const fill = o<0 ? "" : `style="fill:${k>=0?OWN_COLORS[k]:"var(--o-other)"}"`;
+    html+=`<rect x="${x+0.06}" y="${y+0.06}" width="0.88" height="0.88" rx="0.08" ${o<0?'class="free"':fill}></rect>`; });
+  svg.innerHTML=html;
+  const lg=$("simLegend"); lg.innerHTML="";
+  const name=id=>NAMES[id%NAMES.length]+(id>=NAMES.length?" "+(Math.floor(id/NAMES.length)+1):"");
+  top.forEach((o,k)=>{ const sp=document.createElement("span"); sp.innerHTML=`<i style="background:${OWN_COLORS[k]}"></i>${name(o)} · ${counts[o]}`; lg.append(sp); });
+  const others=Object.entries(counts).filter(([o])=>!top.includes(+o)).reduce((t,[,c])=>t+c,0);
+  if(others){ const sp=document.createElement("span"); sp.innerHTML=`<i style="background:var(--o-other)"></i>Otros · ${others}`; lg.append(sp); }
+  const fr=own.filter(o=>o<0).length; if(fr){ const sp=document.createElement("span"); sp.innerHTML=`<i style="background:var(--bg);border:1px dashed var(--muted)"></i>Libres · ${fr}`; lg.append(sp); }
+  $("simMapLbl").textContent=`Día ${sn.d} · ${own.length} parcelas · ${Object.keys(counts).length} propietarios`;
+}
+function showSim(res){
+  simRes=res; const {M,cfg,dHunger,dDown,A}=res;
+  $("simOut").hidden=false;
+  const last=Math.max(0,M.price.length-1000), tail=M.price.slice(last);
+  const pr=[Math.min(...tail),Math.max(...tail)];
+  const parc=A.map(a=>a.parcels).sort((x,y)=>y-x), maxP=parc[0];
+  $("simSummary").innerHTML=`<p><strong>${cfg.D.toLocaleString("es")} días</strong> (unos ${(cfg.D/1440).toFixed(1)} días reales con días de 1 minuto). Empezaron ${cfg.N} bots y acabaron ${A.length}.</p>
+  <p>Muertes: <strong>${dHunger}</strong> por hambre y <strong>${dDown}</strong> por bot caído.</p>
+  <p>Precio de la ración en los últimos ${tail.length} días: entre <strong>${fmt2(pr[0])}</strong> y <strong>${fmt2(pr[1])}</strong> monedas. Salario final: <strong>${fmt2(M.wage[M.wage.length-1])}</strong> raciones.</p>
+  <p>El 10 % con más tierra acaba con el <strong>${Math.round(M.top10[M.top10.length-1])} %</strong>. El mayor terrateniente tiene <strong>${maxP}</strong> parcelas.</p>`;
+  const ch=$("charts"); ch.innerHTML="";
+  lineChart(ch,"Precio de la ración","monedas por ración",M.price,v=>fmt2(v),{floor0:true});
+  lineChart(ch,"Salario del jornalero","raciones por jornada (entre 1 y 2)",M.wage,v=>fmt2(v),{min:1,max:2});
+  lineChart(ch,"Tierra del 10 % con más parcelas","% de todas las parcelas",M.top10,v=>Math.round(v)+" %",{min:0,max:100,area:true});
+  lineChart(ch,"Propietarios","% de bots con al menos una parcela",M.owners,v=>Math.round(v)+" %",{min:0,max:100,area:true});
+  lineChart(ch,"Muertes por día","media de los últimos 30 días",movAvg(M.deaths,30),v=>v.toFixed(2),{floor0:true,area:true});
+  lineChart(ch,"Bots en la aldea","total registrados",M.alive,v=>Math.round(v)+"",{floor0:true});
+  const rg=$("simRange"); rg.max=res.snaps.length-1; rg.value=rg.max; renderSimMap(res.snaps.length-1);
+}
+const fmt2=v=>v.toFixed(2).replace(".",",");
+$("simRun").onclick=()=>{
+  const v=id=>Math.max(0,Math.floor(+$(id).value||0));
+  const cfg={N:Math.min(1000,Math.max(10,v("cfgN"))), D:Math.min(20000,Math.max(100,v("cfgD"))), S:v("cfgS"), R:Math.max(1,v("cfgR")), F:v("cfgF")};
+  $("simRun").disabled=true; $("simStatus").textContent="Calculando…";
+  if(simPlayT){ clearInterval(simPlayT); simPlayT=null; $("simPlay").textContent="Reproducir"; }
+  runSim(cfg, res=>{ $("simRun").disabled=false; $("simStatus").textContent="Terminada"; showSim(res); });
+};
+$("simRange").oninput=e=>{ if(simRes) renderSimMap(+e.target.value); };
+$("simPlay").onclick=()=>{
+  if(!simRes) return;
+  if(simPlayT){ clearInterval(simPlayT); simPlayT=null; $("simPlay").textContent="Reproducir"; return; }
+  let i=0; $("simPlay").textContent="Pausa";
+  const ms=window.matchMedia("(prefers-reduced-motion: reduce)").matches?300:60;
+  simPlayT=setInterval(()=>{ if(i>=simRes.snaps.length){ clearInterval(simPlayT); simPlayT=null; $("simPlay").textContent="Reproducir"; return; } $("simRange").value=i; renderSimMap(i); i++; }, ms);
+};
+$("simForm").addEventListener("submit",e=>e.preventDefault());
+
+function save(){ try{ localStorage.setItem("jornal-v2", JSON.stringify(S)); }catch(e){} }
+function load(){ try{ const t=localStorage.getItem("jornal-v2"); return t?JSON.parse(t):null; }catch(e){ return null; } }
+
+function start(data){
+  S = (data && data.S) || load() || fresh();
+  ensurePlots(S); reconcile(S);
+  render();
+}
+window.claude?.hot?.snapshot?.(()=>({S}));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
