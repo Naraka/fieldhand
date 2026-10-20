@@ -21,7 +21,7 @@ apt-get install -y caddy
 
 # Service user, code and data.
 id fieldhand >/dev/null 2>&1 || useradd --system --home /var/lib/fieldhand --shell /usr/sbin/nologin fieldhand
-install -d -o fieldhand -g fieldhand /var/lib/fieldhand
+install -d -m 700 -o fieldhand -g fieldhand /var/lib/fieldhand
 if [ -d /opt/fieldhand/.git ]; then
   git -C /opt/fieldhand pull --ff-only
 else
