@@ -3,6 +3,8 @@
 # if FIELDHAND_BACKUP_URL is set, uploaded there (an object storage URL that
 # only allows writes, such as an Oracle pre-authenticated request).
 set -euo pipefail
+# The database holds the players' tokens: backups are readable by this user only.
+umask 077
 
 DB="${FIELDHAND_DB:-/var/lib/fieldhand/fieldhand.db}"
 DIR="$(dirname "$DB")/backups"
