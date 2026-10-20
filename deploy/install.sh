@@ -30,6 +30,10 @@ fi
 curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
 (cd /opt/fieldhand && uv sync --no-dev --frozen)
 
+if [ ! -f /etc/fieldhand.env ]; then
+  install -m 600 /dev/null /etc/fieldhand.env
+  printf 'FIELDHAND_GITHUB_CLIENT_ID=\nFIELDHAND_GITHUB_CLIENT_SECRET=\n' > /etc/fieldhand.env
+fi
 install -m 644 /opt/fieldhand/deploy/fieldhand.service /etc/systemd/system/fieldhand.service
 install -m 644 /opt/fieldhand/deploy/Caddyfile /etc/caddy/Caddyfile
 mkdir -p /etc/systemd/system/caddy.service.d
@@ -50,3 +54,5 @@ systemctl enable --now fieldhand
 systemctl restart caddy
 echo "Fieldhand is running at https://$FIELDHAND_DOMAIN (API docs at /docs)."
 echo "Remember to open ports 80 and 443 in the cloud firewall (Oracle: VCN security list)."
+grep -q 'CLIENT_ID=.' /etc/fieldhand.env \
+  || echo "Registration is open until you set up GitHub sign-in in /etc/fieldhand.env (see deploy/README.md)."

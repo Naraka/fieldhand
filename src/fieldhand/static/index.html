@@ -68,6 +68,10 @@ nav.tabs button {
 nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--field); }
 .view { display: flex; flex-direction: column; gap: 14px; }
 .box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+a.cta {
+  display: inline-block; margin-bottom: 4px; padding: 9px 16px; border-radius: 6px; font-weight: 700;
+  background: var(--ink); color: var(--bg); text-decoration: none;
+}
 button.small {
   font: inherit; font-weight: 700; font-size: .85rem; border-radius: 6px; padding: 6px 12px; cursor: pointer;
   border: 1px solid var(--field); background: transparent; color: var(--field);
@@ -181,11 +185,15 @@ footer { font-size: .8rem; color: var(--muted); }
   <section id="play" class="view" hidden>
     <div class="box">
       <h2>Play in 5 minutes</h2>
-      <p>You don't click: you write a bot. Register, keep the token and call the API once a day or more.</p>
+      <p>You don't click: you write a bot. Get a token, keep it secret and call the API once a day or more.</p>
+      <p id="signupGithub" hidden>
+        <a class="cta" href="login">Sign in with GitHub</a><br>
+        <small class="muted">One player per GitHub account. Sign in again any time to see your token.</small>
+      </p>
       <pre id="snippet"></pre>
       <p>Or start from the example bot, which uses only the Python standard library:</p>
       <pre>git clone https://github.com/Naraka/fieldhand
-python fieldhand/examples/bot.py --name my-bot --server <span class="origin"></span></pre>
+FIELDHAND_TOKEN=&lt;token&gt; python fieldhand/examples/bot.py --name my-bot --server <span class="origin"></span></pre>
       <p>Run it with <code>--once</code> from cron to play one day per run.
         The full API is documented at <a href="docs">/docs</a> and the rules are in
         <a href="https://github.com/Naraka/fieldhand/blob/main/docs/RULES.md">RULES.md</a>.</p>
@@ -471,6 +479,8 @@ async function refresh() {
     $("sRation").textContent = fmt(w.prices.ration_price);
     $("sWage").textContent = fmt(w.prices.wage);
     $("sLand").textContent = fmt(w.prices.land_price);
+    $("signupGithub").hidden = w.signup !== "github";
+    $("snippet").textContent = (w.signup === "github" ? "" : register) + playSnippet;
     if (view === "village") renderMap();
     if (view === "economy") await renderEconomy();
     if (view === "rankings") await renderRankings();
@@ -492,14 +502,17 @@ document.querySelectorAll("nav.tabs button").forEach((b) => {
 
 const origin = location.origin;
 document.querySelectorAll(".origin").forEach((el) => { el.textContent = origin; });
-$("snippet").textContent =
+const register =
 `curl -X POST ${origin}/register -H 'Content-Type: application/json' -d '{"name": "my-bot"}'
 # → {"token": "..."}  keep it: it is shown only once
 
-curl ${origin}/me -H 'Authorization: Bearer <token>'
+`;
+const playSnippet =
+`curl ${origin}/me -H 'Authorization: Bearer <token>'
 curl -X POST ${origin}/claim -H 'Authorization: Bearer <token>'
 curl -X POST ${origin}/harvest -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"plot_id": 1}'
 curl -X POST ${origin}/eat -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"qty": 1}'`;
+$("snippet").textContent = register + playSnippet;
 
 refresh();
 setInterval(refresh, REFRESH_MS);

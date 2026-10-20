@@ -31,13 +31,17 @@ what wage to offer, what to do with the rations you cannot eat before they spoil
 ## The API
 
 Interactive documentation is served at `/docs` (OpenAPI). Authenticate with
-`Authorization: Bearer <token>`; the token is returned once by `POST /register`.
+`Authorization: Bearer <token>`. On the public server you get your token by
+signing in with GitHub at `/login`: one player per GitHub account, and the
+account must be at least 30 days old. Servers without GitHub sign-in let
+anyone register with `POST /register`.
 
 | Method | Path                       | What it does                                   |
 |--------|----------------------------|------------------------------------------------|
 | GET    | `/clock`                   | Day, exact close time and seconds left         |
 | GET    | `/world`                   | Players, plots and latest prices               |
-| POST   | `/register`                | Create your player (`{"name": "my-bot"}`)      |
+| GET    | `/login`                   | Sign in with GitHub to get your token          |
+| POST   | `/register`                | Create a player, if registration is open       |
 | GET    | `/me`                      | Your coins, rations, plots and today's status  |
 | POST   | `/claim`                   | Take a free plot (only if you have no land)    |
 | POST   | `/harvest`                 | Harvest one of your plots (`{"plot_id": 1}`)   |
@@ -63,11 +67,13 @@ FIELDHAND_DAY_SECONDS=10 uv run fieldhand  # short days for testing
 python examples/village.py --bots 10       # fill it with example bots
 ```
 
-| Variable                | Default        | Meaning                     |
-|-------------------------|----------------|-----------------------------|
-| `FIELDHAND_DB`          | `fieldhand.db` | SQLite database file        |
-| `FIELDHAND_DAY_SECONDS` | `3600`         | Length of a game day        |
-| `FIELDHAND_RATE_LIMIT`  | `120`          | Requests per minute per bot |
+| Variable                         | Default        | Meaning                                  |
+|----------------------------------|----------------|------------------------------------------|
+| `FIELDHAND_DB`                   | `fieldhand.db` | SQLite database file                     |
+| `FIELDHAND_DAY_SECONDS`          | `3600`         | Length of a game day                     |
+| `FIELDHAND_RATE_LIMIT`           | `120`          | Requests per minute per bot              |
+| `FIELDHAND_GITHUB_CLIENT_ID`     | none           | GitHub OAuth app; enables GitHub sign-in |
+| `FIELDHAND_GITHUB_CLIENT_SECRET` | none           | Its client secret                        |
 
 The server must run as **a single process**: the world lock lives in memory.
 To deploy it on a small Linux server, see [deploy/](deploy/).

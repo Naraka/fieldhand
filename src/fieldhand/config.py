@@ -3,6 +3,12 @@ import os
 DB_PATH = os.environ.get("FIELDHAND_DB", "fieldhand.db")
 DAY_SECONDS = float(os.environ.get("FIELDHAND_DAY_SECONDS", 3600))
 RATE_LIMIT_PER_MIN = int(os.environ.get("FIELDHAND_RATE_LIMIT", 120))
+# Sign in with GitHub: one player per GitHub account. Without a GitHub app,
+# registration is open (POST /register), which is fine for local games.
+GITHUB_CLIENT_ID = os.environ.get("FIELDHAND_GITHUB_CLIENT_ID")
+GITHUB_CLIENT_SECRET = os.environ.get("FIELDHAND_GITHUB_CLIENT_SECRET")
+# Newer GitHub accounts cannot play, so that fake accounts are not worth it.
+MIN_GITHUB_ACCOUNT_DAYS = 30
 
 START_COINS = 50
 RATIONS_PER_HARVEST = 2

@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS players (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
     token TEXT NOT NULL UNIQUE,
+    github_id INTEGER UNIQUE,
     coins INTEGER NOT NULL,
     -- New and respawned players count as having eaten the day before.
     last_meal_day INTEGER NOT NULL,

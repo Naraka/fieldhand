@@ -14,7 +14,8 @@ not play or intervene.
 
 ## Players and land
 
-1. Registering gives **50 coins** and creates **1 free plot**. Land only grows
+1. Each person plays **one player**, tied to their GitHub account.
+   Registering gives **50 coins** and creates **1 free plot**. Land only grows
    with registrations.
 2. Free plots are taken with `POST /claim`, first come first served. Only
    players **without land** can claim.

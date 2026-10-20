@@ -6,6 +6,8 @@ After=network.target
 User=fieldhand
 WorkingDirectory=/opt/fieldhand
 Environment=FIELDHAND_DB=/var/lib/fieldhand/fieldhand.db
+# GitHub sign-in: FIELDHAND_GITHUB_CLIENT_ID and FIELDHAND_GITHUB_CLIENT_SECRET.
+EnvironmentFile=-/etc/fieldhand.env
 ExecStart=/opt/fieldhand/.venv/bin/fieldhand --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=2

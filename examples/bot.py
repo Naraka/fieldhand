@@ -3,6 +3,9 @@
     python bot.py --name my-bot --server http://127.0.0.1:8000
     python bot.py --name my-bot --once     # play today and exit, for cron
 
+On servers with GitHub sign-in, get your token at /login and pass it in
+FIELDHAND_TOKEN. Elsewhere the bot registers itself and keeps the token.
+
 Every day it: claims land if it has none, harvests or looks for a job,
 buys food if it has none, eats, and sells what it will not need.
 """

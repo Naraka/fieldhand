@@ -2,20 +2,29 @@
 
 import asyncio
 import contextlib
+import html
+import secrets
 import time
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
-from . import __version__, config, game
+from . import __version__, config, game, github
 from .world import World
 
 VIEWER = Path(__file__).with_name("static") / "index.html"
+# Shown after signing in with GitHub. Never cached: it holds the token.
+TOKEN_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Fieldhand</title>
+<style>body{{font-family:system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 16px;
+line-height:1.5}}code,pre{{background:#eef0e6;padding:2px 6px;border-radius:4px;color:#1f2a1c}}
+pre{{padding:10px;overflow-x:auto}}</style></head><body><h1>Fieldhand</h1>{body}
+<p><a href="/">Back to the village</a></p></body></html>"""
 
 
 class RegisterIn(BaseModel):
@@ -49,6 +58,14 @@ def to_milli(coins):
     return round(coins * config.MILLI)
 
 
+def token_page(body, status=200):
+    return HTMLResponse(
+        TOKEN_PAGE.format(body=body),
+        status_code=status,
+        headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"},
+    )
+
+
 def create_app(world=None):
     @contextlib.asynccontextmanager
     async def lifespan(app):
@@ -66,6 +83,7 @@ def create_app(world=None):
     )
     bearer = HTTPBearer(auto_error=False)
     hits = defaultdict(deque)
+    login_states = {}  # state -> time, to check that a GitHub callback comes from /login
 
     @app.middleware("http")
     async def rate_limit(request: Request, call_next):
@@ -116,13 +134,56 @@ def create_app(world=None):
                 k: (v / config.MILLI if v is not None else None)
                 for k, v in game.last_prices(db).items()
             }
-            return {**dict(counts), "prices": prices}
+            signup = "github" if config.GITHUB_CLIENT_ID else "open"
+            return {**dict(counts), "prices": prices, "signup": signup}
 
         return play(request, summary)
 
-    @app.post("/register", summary="Create a player. Keep the token: it is shown only once")
+    @app.post("/register", summary="Create a player (only on servers without GitHub sign-in)")
     def register(body: RegisterIn, request: Request):
+        if config.GITHUB_CLIENT_ID:
+            raise HTTPException(403, "this server uses GitHub sign-in: open /login in a browser")
         return play(request, game.register, body.name)
+
+    @app.get("/login", summary="Sign in with GitHub to get your token (open it in a browser)")
+    def login():
+        if not config.GITHUB_CLIENT_ID:
+            raise HTTPException(404, "this server has open registration: POST /register")
+        now = time.monotonic()
+        for state, t in list(login_states.items()):
+            if now - t > 600:
+                del login_states[state]
+        state = secrets.token_urlsafe(16)
+        login_states[state] = now
+        return RedirectResponse(github.authorize_url(state))
+
+    @app.get("/auth/github", include_in_schema=False)
+    def github_callback(request: Request, code: str = "", state: str = ""):
+        if login_states.pop(state, None) is None:
+            return token_page(
+                "<p>This sign-in link has expired. <a href='/login'>Try again</a>.</p>", 400
+            )
+        try:
+            user = github.fetch_user(code)
+        except (OSError, ValueError, KeyError):
+            return token_page("<p>GitHub sign-in failed. <a href='/login'>Try again</a>.</p>", 502)
+        if github.account_age_days(user) < config.MIN_GITHUB_ACCOUNT_DAYS:
+            return token_page(
+                f"<p>Your GitHub account must be at least {config.MIN_GITHUB_ACCOUNT_DAYS} "
+                "days old to play.</p>",
+                403,
+            )
+        try:
+            player = play(request, game.register_github, user["id"], user["login"])
+        except HTTPException as e:
+            return token_page(f"<p>{html.escape(e.detail)}</p>", e.status_code)
+        name, token = html.escape(player["name"]), html.escape(player["token"])
+        return token_page(
+            f"<p>You play as <b>{name}</b>. This is your token: keep it secret.</p>"
+            f"<pre>{token}</pre><p>Your bot sends it in every request:</p>"
+            f"<pre>Authorization: Bearer {token}</pre>"
+            "<p>Lost it? Sign in again to see it. Docs: <a href='/docs'>/docs</a>.</p>"
+        )
 
     @app.get("/me", summary="Your coins, rations, plots and today's status")
     def me(request: Request, pid: int = Depends(player_id)):

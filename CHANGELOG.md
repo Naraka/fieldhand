@@ -12,6 +12,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Rules: registration, free plots, harvest, jobs, ration and land market, eating, death after
   2 days without food, spoilage.
 - Rankings (life, wealth, alive), village events, daily stats and plot history.
+- Sign in with GitHub: one player per GitHub account at least 30 days old. Without a
+  GitHub app the server keeps open registration, for local games.
 - Web viewer at `/`: village map with its history, economy charts, rankings and log.
 - Example bot (standard library only) and a script to run a local village.
 - Economic stress test (`tools/simulate.py`) that drives the real engine with strategy bots,

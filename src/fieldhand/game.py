@@ -6,7 +6,7 @@ import secrets
 from . import config
 
 OFFER_KINDS = ("sell_rations", "buy_rations", "sell_land", "job")
-NAME_RE = re.compile(r"^[A-Za-z0-9_-]{3,24}$")
+NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,39}$")
 
 
 class GameError(Exception):
@@ -108,22 +108,33 @@ def _own_plot(db, pid, plot_id):
 # --- Actions ---------------------------------------------------------------
 
 
-def register(db, name):
+def register(db, name, github_id=None):
     if not NAME_RE.match(name):
-        raise GameError("name must be 3-24 characters: letters, digits, _ or -")
+        raise GameError("name must be 1-39 characters: letters, digits, _ or -")
     if db.execute("SELECT 1 FROM players WHERE name = ?", (name,)).fetchone():
         raise GameError("name already taken", 409)
     day = current_day(db)
     token = secrets.token_urlsafe(24)
     pid = db.execute(
-        "INSERT INTO players (name, token, coins, last_meal_day, alive_since) "
-        "VALUES (?, ?, ?, ?, ?)",
-        (name, token, config.START_COINS * config.MILLI, day - 1, day),
+        "INSERT INTO players (name, token, github_id, coins, last_meal_day, alive_since) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (name, token, github_id, config.START_COINS * config.MILLI, day - 1, day),
     ).lastrowid
     plot_id = db.execute("INSERT INTO plots (owner_id) VALUES (NULL)").lastrowid
     db.execute("INSERT INTO plot_log (day, plot_id, owner_id) VALUES (?, ?, NULL)", (day, plot_id))
     _log(db, day, "register", f"{name} arrives. A new free plot appears (#{plot_id}).")
     return {"player_id": pid, "name": name, "token": token}
+
+
+def register_github(db, github_id, login):
+    """One player per GitHub account, named after it. Signing in again gives
+    back the same token."""
+    row = db.execute(
+        "SELECT id, name, token FROM players WHERE github_id = ?", (github_id,)
+    ).fetchone()
+    if row:
+        return {"player_id": row["id"], "name": row["name"], "token": row["token"]}
+    return register(db, login, github_id)
 
 
 def claim(db, pid, plot_id=None):
