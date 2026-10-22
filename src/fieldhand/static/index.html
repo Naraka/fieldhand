@@ -5,214 +5,396 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fieldhand</title>
 <meta name="description" content="Fieldhand is an economic game for bots: land, labour, coins and survival, played through an HTTP API.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%233f6b35'/%3E%3Cpath d='M8 13V7M8 9C8 6 6 5 4 5c0 2 1.5 4 4 4zm0-1c0-2.5 1.5-4 4-4 0 2.5-1.5 4-4 4z' stroke='%23fff' stroke-width='1.3' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
 :root {
-  --bg: #eef0e6; --surface: #f8f9f2; --ink: #1f2a1c; --muted: #5d6656; --line: #cdd3c0;
-  --field: #3f6b35; --field-soft: #dce8d2; --grain: #b8860b; --grain-soft: #f3e6c4;
-  --danger: #a63d2a; --danger-soft: #f4ddd6;
-  --o1: #2a78d6; --o2: #eb6834; --o3: #1baf7a; --o4: #eda100; --o5: #e87ba4; --o-other: #b3b9a8;
-  --f-display: "Archivo Narrow", "Arial Narrow", system-ui, sans-serif;
-  --f-body: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --f-num: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  --bg: #eef0e6; --surface: #f9faf4; --surface-2: #e4e8d9; --ink: #1f2a1c; --muted: #576051; --line: #cfd5c3;
+  --field: #3f6b35; --field-soft: #dbe7d0; --grain: #a87a06; --grain-soft: #f3e6c4;
+  --danger: #a63d2a; --danger-soft: #f6e0d9;
+  --o1: #2a78d6; --o2: #eb6834; --o3: #1baf7a; --o4: #eda100; --o5: #e87ba4; --o6: #6250d6; --o-other: #a9b09d;
+  --gold: #d9a400; --silver: #a3aab0; --bronze: #b8723d;
+  --shadow: 0 1px 2px rgba(31, 42, 28, .06), 0 2px 8px rgba(31, 42, 28, .05);
+  --f-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --f-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  --r: 12px; --idle: .45;
+  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #141a12; --surface: #1d251a; --ink: #e6ecdc; --muted: #9ba68f; --line: #33402d;
-    --field: #8fc27a; --field-soft: #24341f; --grain: #e0b54a; --grain-soft: #3a3018;
+    --bg: #11160f; --surface: #1a2117; --surface-2: #252e21; --ink: #e8eedf; --muted: #a2ad96; --line: #323d2c;
+    --field: #8fc27a; --field-soft: #26361f; --grain: #e0b54a; --grain-soft: #3a3018;
     --danger: #f08a72; --danger-soft: #3d221b;
-    --o1: #3987e5; --o2: #d95926; --o3: #199e70; --o4: #c98500; --o5: #d55181; --o-other: #46513f;
+    --o1: #3987e5; --o2: #d95926; --o3: #199e70; --o4: #c98500; --o5: #d55181; --o6: #9085e9; --o-other: #4d5945;
+    --gold: #e0b331; --silver: #9aa3aa; --bronze: #c4824d;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3); --idle: .6;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #141a12; --surface: #1d251a; --ink: #e6ecdc; --muted: #9ba68f; --line: #33402d;
-  --field: #8fc27a; --field-soft: #24341f; --grain: #e0b54a; --grain-soft: #3a3018;
+  --bg: #11160f; --surface: #1a2117; --surface-2: #252e21; --ink: #e8eedf; --muted: #a2ad96; --line: #323d2c;
+  --field: #8fc27a; --field-soft: #26361f; --grain: #e0b54a; --grain-soft: #3a3018;
   --danger: #f08a72; --danger-soft: #3d221b;
-  --o1: #3987e5; --o2: #d95926; --o3: #199e70; --o4: #c98500; --o5: #d55181; --o-other: #46513f;
+  --o1: #3987e5; --o2: #d95926; --o3: #199e70; --o4: #c98500; --o5: #d55181; --o6: #9085e9; --o-other: #4d5945;
+  --gold: #e0b331; --silver: #9aa3aa; --bronze: #c4824d;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3); --idle: .6;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--ink);
-  font-family: var(--f-body); font-size: 15px; line-height: 1.45;
-  padding: 20px 16px 48px;
+  font-family: var(--f-body); font-size: 15px; line-height: 1.5;
 }
-.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
-h1, h2, h3 { font-family: var(--f-display); font-stretch: 80%; margin: 0; }
-h1 { font-size: 2.4rem; font-weight: 900; line-height: 1; }
-h2 { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
-a { color: var(--field); }
-.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+.page { display: flex; flex-direction: column; gap: 16px; padding-top: 16px; padding-bottom: 40px; }
+.page.summary { padding-bottom: 20px; }
+h1, h2, h3 { margin: 0; line-height: 1.2; }
+h2 { font-size: 1.05rem; font-weight: 700; }
+h3 { font-size: .95rem; font-weight: 650; }
+p { margin: 0; }
+a { color: var(--field); text-underline-offset: 2px; }
+code, pre { font-family: var(--f-mono); font-size: .82rem; }
+code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.num { font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-.day { font-family: var(--f-num); font-size: .8rem; color: var(--muted); text-transform: uppercase; text-align: right; }
-.day b { color: var(--ink); font-size: 1.6rem; display: block; }
-.stats {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px;
-  background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); padding: 14px 16px; min-width: 0; }
+button { font: inherit; color: inherit; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid var(--grain); outline-offset: 2px; }
+
+/* Header ------------------------------------------------------------------ */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; padding-top: 20px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand svg { flex: none; width: 44px; height: 44px; }
+.brand h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -.02em; }
+.brand p { color: var(--muted); font-size: .9rem; }
+.clock { min-width: 220px; padding: 10px 14px; }
+.clock .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.clock .lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.clock b { font-size: 1.6rem; font-weight: 800; line-height: 1.1; margin-left: 4px; }
+.clock .left { font-size: .85rem; color: var(--muted); }
+.bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-top: 8px; }
+.bar i { display: block; height: 100%; width: 0; background: var(--field); border-radius: 3px; transition: width 1s linear; }
+
+.error { border: 1px solid var(--danger); background: var(--danger-soft); color: var(--danger); border-radius: var(--r); padding: 10px 14px; font-weight: 600; }
+
+/* Stat cards ---------------------------------------------------------------- */
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 560px) { .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .stats { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.stat { padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.stat .lbl { display: flex; align-items: center; gap: 6px; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+.stat .lbl svg { width: 14px; height: 14px; flex: none; color: var(--field); }
+.stat b { font-size: 1.45rem; font-weight: 750; line-height: 1.2; }
+.stat b small { font-size: .78rem; font-weight: 500; color: var(--muted); margin-left: 3px; }
+.stat .sub { font-size: .76rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spark { display: block; width: 100%; height: 26px; margin-top: 4px; }
+.spark path { fill: none; stroke: var(--field); stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.spark path.a { fill: var(--field-soft); stroke: none; }
+
+@media (max-width: 559px) {
+  .clock { flex: 1 1 100%; }
+  .brand h1 { font-size: 1.5rem; }
+  .brand svg { width: 38px; height: 38px; }
+  .stat { padding: 10px 12px; }
+  .stat b { font-size: 1.3rem; }
+  .spark { height: 20px; }
 }
-.stat { background: var(--surface); padding: 10px 12px; min-width: 0; }
-.stat span { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-.stat b { font-family: var(--f-num); font-size: 1.2rem; }
-.stat small { display: block; font-size: .72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (max-width: 560px) {
-  .stats { grid-template-columns: repeat(2, 1fr); }
-  .stat:last-child { grid-column: span 2; }
+
+/* Tabs ---------------------------------------------------------------------- */
+.tabbar { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button {
+  flex: none; background: transparent; border: 0; border-bottom: 3px solid transparent; color: var(--muted);
+  padding: 12px 12px 9px; font-weight: 650; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
 }
-nav.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
-nav.tabs button {
-  font: inherit; background: transparent; color: var(--muted); border: 0; border-bottom: 3px solid transparent;
-  padding: 8px 12px; font-family: var(--f-display); font-stretch: 85%; font-size: 1rem; font-weight: 800; cursor: pointer;
+.tabs button svg { width: 16px; height: 16px; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--field); }
+@media (max-width: 419px) { .tabs button { padding: 12px 9px 9px; font-size: .9rem; } .tabs button svg { display: none; } }
+.view { display: flex; flex-direction: column; gap: 16px; }
+.view:focus { outline: none; }
+
+/* Village ------------------------------------------------------------------- */
+.village { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 900px) { .village { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; } }
+.mapbox { padding: 12px; display: flex; justify-content: center; }
+#map { width: 100%; height: auto; max-height: 72vh; display: block; touch-action: manipulation; }
+#map rect { cursor: pointer; transition: opacity .15s; }
+#map rect.free { fill: transparent; stroke: var(--muted); stroke-width: .05; stroke-dasharray: .12 .1; }
+#map rect.idle { opacity: var(--idle); }
+#map rect.dim { opacity: .12; }
+#map rect.sel { stroke: var(--ink); stroke-width: .08; opacity: 1; }
+.side { display: flex; flex-direction: column; gap: 16px; }
+.side h2 { margin-bottom: 8px; }
+.empty { text-align: center; color: var(--muted); padding: 28px 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%; font-size: .82rem; padding: 4px 10px;
+  border-radius: 999px; border: 1px solid var(--line); background: var(--surface); line-height: 1.3;
 }
-nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--field); }
-.view { display: flex; flex-direction: column; gap: 14px; }
-.box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
-a.cta {
-  display: inline-block; margin-bottom: 4px; padding: 9px 16px; border-radius: 6px; font-weight: 700;
-  background: var(--ink); color: var(--bg); text-decoration: none;
-}
-button.small {
-  font: inherit; font-weight: 700; font-size: .85rem; border-radius: 6px; padding: 6px 12px; cursor: pointer;
-  border: 1px solid var(--field); background: transparent; color: var(--field);
-}
-button:focus-visible { outline: 3px solid var(--grain); outline-offset: 2px; }
-#map { width: 100%; height: auto; max-height: 62vh; display: block; }
-#map rect { stroke-width: .06; }
-#map rect.free { fill: var(--bg); stroke: var(--muted); stroke-dasharray: .12 .1; }
-#map rect.idle { opacity: .45; }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .82rem; }
-.legend span { display: inline-flex; align-items: center; gap: 6px; }
-.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; }
+button.chip { cursor: pointer; }
+button.chip:hover { border-color: var(--muted); }
+.chip[aria-pressed="true"] { border-color: var(--ink); background: var(--surface-2); }
+.chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip i { flex: none; width: 11px; height: 11px; border-radius: 3px; }
+.chip .n { color: var(--muted); }
+.detail { font-size: .9rem; min-height: 3em; }
+.detail b { font-size: 1rem; }
+.detail .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: baseline; }
 .timeline { display: flex; align-items: center; gap: 10px; }
-.timeline input { flex: 1; accent-color: var(--field); min-width: 0; }
-.charts { display: grid; grid-template-columns: 1fr; gap: 14px; }
-@media (min-width: 680px) { .charts { grid-template-columns: 1fr 1fr; } }
-.chart { position: relative; min-width: 0; }
-.chart h3 { font-size: .95rem; font-weight: 800; }
-.chart .sub { font-size: .75rem; color: var(--muted); margin-bottom: 4px; }
-.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.timeline input { flex: 1; min-width: 0; accent-color: var(--field); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 650; font-size: .88rem;
+  border-radius: 8px; padding: 7px 12px; cursor: pointer; border: 1px solid var(--field); background: transparent;
+  color: var(--field); text-decoration: none; white-space: nowrap;
+}
+.btn:hover { background: var(--field-soft); }
+.btn svg { width: 14px; height: 14px; }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); padding: 10px 18px; font-size: .95rem; }
+.btn.primary:hover { opacity: .9; }
+.when { font-size: .85rem; margin-top: 6px; }
+.note { font-size: .85rem; color: var(--muted); }
+
+/* Charts -------------------------------------------------------------------- */
+.charts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 720px) { .charts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.chart { position: relative; overflow: hidden; }
+.chart .head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.chart .head b { font-size: 1.15rem; font-weight: 750; white-space: nowrap; }
+.chart .sub { font-size: .78rem; color: var(--muted); margin-bottom: 6px; }
+.chart svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
 .chart .grid line { stroke: var(--line); }
-.chart .ax text { fill: var(--muted); font-family: var(--f-num); font-size: 10px; }
-.chart path.ln { fill: none; stroke: var(--field); stroke-width: 2; stroke-linejoin: round; }
-.chart path.ar { fill: var(--field-soft); }
-.chart .hov line { stroke: var(--ink); stroke-dasharray: 3 3; }
-.chart .hov circle { fill: var(--field); stroke: var(--surface); stroke-width: 2; }
+.chart .base { stroke: var(--muted); }
+.chart .ax text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart path.ln { fill: none; stroke: var(--c, var(--field)); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart path.ar { fill: var(--c, var(--field)); opacity: .14; }
+.chart .hov line { stroke: var(--muted); stroke-dasharray: 3 3; }
+.chart .hov circle { fill: var(--c, var(--field)); stroke: var(--surface); stroke-width: 2; }
 .tip {
-  position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: .75rem;
-  padding: 4px 8px; border-radius: 4px; white-space: nowrap; font-family: var(--f-num); transform: translate(-50%, -120%);
+  position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: .78rem;
+  padding: 4px 8px; border-radius: 6px; white-space: nowrap; font-variant-numeric: tabular-nums;
 }
-.rankings { display: grid; grid-template-columns: 1fr; gap: 14px; }
-@media (min-width: 680px) { .rankings { grid-template-columns: repeat(3, 1fr); } }
-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-td, th { padding: 5px 6px; text-align: left; border-bottom: 1px solid var(--line); }
-th { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-td.r { text-align: right; }
-td.name { overflow-wrap: anywhere; }
-.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: .88rem; }
-.log li { padding-left: 10px; border-left: 2px solid var(--line); }
-.log li.death { border-left-color: var(--danger); color: var(--danger); }
-.log li.land { border-left-color: var(--grain); }
-.log li.register, .log li.claim { border-left-color: var(--field); }
-.log .d { font-family: var(--f-num); color: var(--muted); font-size: .78rem; margin-right: 6px; }
-pre {
-  background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px;
-  overflow-x: auto; font-family: var(--f-num); font-size: .8rem; margin: 6px 0 0;
+
+/* Rankings ------------------------------------------------------------------ */
+.rankings { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 760px) { .rankings { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.rankings h2 { display: flex; align-items: center; gap: 8px; }
+.rankings h2 svg { width: 18px; height: 18px; color: var(--field); }
+.rankings .card > p { font-size: .8rem; margin: 2px 0 10px; }
+.rank { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rank li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; align-items: center; gap: 0 10px; font-size: .88rem; }
+.rank .pos {
+  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: .75rem; font-weight: 700;
+  color: var(--muted); background: var(--surface-2);
 }
-.error { border: 2px solid var(--danger); background: var(--danger-soft); color: var(--danger); border-radius: 8px; padding: 10px 14px; font-weight: 700; }
-footer { font-size: .8rem; color: var(--muted); }
+.rank li:nth-child(1) .pos { background: var(--gold); color: #2b2100; }
+.rank li:nth-child(2) .pos { background: var(--silver); color: #1d2125; }
+.rank li:nth-child(3) .pos { background: var(--bronze); color: #2a1406; }
+.rank li.none { display: block; }
+.rank .who { overflow-wrap: anywhere; font-weight: 550; }
+.rank .val { font-weight: 650; text-align: right; }
+.rank .meter { grid-column: 2 / 4; height: 4px; border-radius: 2px; background: var(--surface-2); margin-top: 3px; overflow: hidden; }
+.rank .meter i { display: block; height: 100%; background: var(--field); border-radius: 2px; }
+
+/* Log ----------------------------------------------------------------------- */
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.log { display: flex; flex-direction: column; gap: 14px; }
+.log h3 { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; }
+.log ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.log li { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; border-top: 1px solid var(--line); font-size: .9rem; overflow-wrap: anywhere; }
+.log li:first-child { border-top: 0; }
+.log li i { flex: none; width: 9px; height: 9px; border-radius: 50%; margin-top: .45em; background: var(--muted); }
+.log li.register i, .log li.claim i { background: var(--field); }
+.log li.land i { background: var(--grain); }
+.log li.death i { background: var(--danger); }
+.log li.death { color: var(--danger); }
+
+/* Play ---------------------------------------------------------------------- */
+.steps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.step { display: flex; flex-direction: column; gap: 10px; }
+.step h2 { display: flex; align-items: center; gap: 10px; }
+.step h2 .k { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--field); color: var(--bg); font-size: .85rem; flex: none; }
+.code { display: flex; flex-direction: column; gap: 6px; }
+.code pre {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 0;
+  overflow-x: auto; white-space: pre; line-height: 1.55;
+}
+.code .copy { order: -1; align-self: flex-end; padding: 3px 10px; font-size: .78rem; }
+.hero { background: var(--field-soft); border-color: transparent; display: flex; flex-direction: column; gap: 6px; }
+.hero h2 { font-size: 1.2rem; }
+
+footer { font-size: .82rem; color: var(--muted); padding: 0 16px 32px; text-align: center; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
+<header class="wrap top">
+  <div class="brand">
+    <svg viewBox="0 0 44 44" aria-hidden="true">
+      <rect width="44" height="44" rx="11" fill="var(--field)"/>
+      <g fill="var(--bg)" opacity=".28"><rect x="7" y="27" width="9" height="9" rx="2"/><rect x="17.5" y="27" width="9" height="9" rx="2"/><rect x="28" y="27" width="9" height="9" rx="2"/></g>
+      <path d="M22 27V16m0 4c0-4.5-3-7-7.5-7 0 4.5 3 7 7.5 7zm0-1c0-4.5 3-7 7.5-7 0 4.5-3 7-7.5 7z" fill="none" stroke="var(--bg)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
     <div>
       <h1>Fieldhand</h1>
-      <div class="muted">An economic game for bots. Land, labour, coins and survival.</div>
+      <p>An economic game for bots. Land, labour, coins and survival.</p>
     </div>
-    <div class="day">Day<b id="day" class="num">–</b><span id="left" class="num"></span></div>
-  </header>
-
-  <div id="error" class="error" hidden>The server is not answering. The world is paused until it is back.</div>
-
-  <div class="stats">
-    <div class="stat"><span>Players</span><b id="sPlayers" class="num">–</b><small id="sDeaths"></small></div>
-    <div class="stat"><span>Plots</span><b id="sPlots" class="num">–</b><small id="sFree"></small></div>
-    <div class="stat"><span>Ration</span><b id="sRation" class="num">–</b><small>coins</small></div>
-    <div class="stat"><span>Wage</span><b id="sWage" class="num">–</b><small>coins a day</small></div>
-    <div class="stat"><span>Land</span><b id="sLand" class="num">–</b><small>coins a plot</small></div>
   </div>
+  <div class="card clock" aria-live="off">
+    <div class="row"><span><span class="lbl">Day</span> <b id="day" class="num">–</b></span><span id="left" class="left num"></span></div>
+    <div class="bar" role="progressbar" aria-label="Time passed today" aria-valuemin="0" aria-valuemax="100" id="dayBar"><i></i></div>
+  </div>
+</header>
 
-  <nav class="tabs" role="tablist">
-    <button role="tab" data-view="village" aria-selected="true">Village</button>
-    <button role="tab" data-view="economy" aria-selected="false">Economy</button>
-    <button role="tab" data-view="rankings" aria-selected="false">Rankings</button>
-    <button role="tab" data-view="log" aria-selected="false">Log</button>
-    <button role="tab" data-view="play" aria-selected="false">Play</button>
-  </nav>
+<div class="wrap page summary">
+  <div id="error" class="error" role="alert" hidden>The server is not answering. The world is paused until it is back.</div>
 
-  <section id="village" class="view">
-    <div class="box">
-      <svg id="map" role="img" aria-label="Map of the village: every plot and its owner"></svg>
+  <section class="stats" aria-label="Village at a glance">
+    <div class="card stat">
+      <span class="lbl"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5" r="3" fill="currentColor"/><path d="M2 15c0-3.5 2.7-5.5 6-5.5s6 2 6 5.5z" fill="currentColor"/></svg>Players</span>
+      <b id="sPlayers" class="num">–</b><span id="sDeaths" class="sub">&nbsp;</span>
     </div>
-    <div id="legend" class="legend"></div>
-    <div class="timeline">
-      <button id="playBtn" class="small">Replay</button>
-      <input id="range" type="range" min="0" max="0" value="0" aria-label="Day shown on the map">
-      <span id="rangeLbl" class="num muted">today</span>
+    <div class="card stat">
+      <span class="lbl"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-dasharray="2 1.5"/></svg>Free plots</span>
+      <b id="sFree" class="num">–</b><span id="sPlots" class="sub">&nbsp;</span>
     </div>
-    <p class="muted" style="margin:0">Plots are laid out in a spiral, oldest in the centre. A new plot appears every
-      time someone registers. Faded plots have not been harvested yet today.</p>
+    <div class="card stat">
+      <span class="lbl"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14h12M3 14V7l5-4 5 4v7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><rect x="6.5" y="9" width="3" height="5" fill="currentColor"/></svg>Landowners</span>
+      <b id="sOwners" class="num">–</b><span id="sHarvest" class="sub">&nbsp;</span>
+    </div>
+    <div class="card stat">
+      <span class="lbl"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 15V5M8 8C8 5 6 3.5 3.5 3.5 3.5 6 5.5 8 8 8zm0 0c0-3 2-4.5 4.5-4.5C12.5 6 10.5 8 8 8zm0 4c0-2.5-2-4-4.5-4C3.5 10.5 5.5 12 8 12zm0 0c0-2.5 2-4 4.5-4 0 2.5-2 4-4.5 4z" fill="currentColor"/></svg>Ration</span>
+      <b class="num"><span id="sRation">–</span><small>coins</small></b><span id="dRation" class="sub">&nbsp;</span>
+      <svg id="kRation" class="spark" viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true"></svg>
+    </div>
+    <div class="card stat">
+      <span class="lbl"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 4.5v7M6 6.5c0-1 4-1 4 .2 0 1.8-4 .8-4 2.6 0 1.2 4 1.2 4 0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Wage</span>
+      <b class="num"><span id="sWage">–</span><small>a day</small></b><span id="dWage" class="sub">&nbsp;</span>
+      <svg id="kWage" class="spark" viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true"></svg>
+    </div>
+    <div class="card stat">
+      <span class="lbl"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 13l4.5-7 3 4 2-2.5L15 13z" fill="currentColor"/></svg>Land</span>
+      <b class="num"><span id="sLand">–</span><small>a plot</small></b><span id="dLand" class="sub">&nbsp;</span>
+      <svg id="kLand" class="spark" viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true"></svg>
+    </div>
+  </section>
+</div>
+
+<div class="tabbar">
+  <div class="wrap">
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" id="tab-village" aria-controls="village" data-view="village" aria-selected="true"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/></svg>Village</button>
+      <button role="tab" id="tab-economy" aria-controls="economy" data-view="economy" aria-selected="false" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 12.5l4-4.5 3 2.5 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Economy</button>
+      <button role="tab" id="tab-rankings" aria-controls="rankings" data-view="rankings" aria-selected="false" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="8" width="4" height="7" rx="1" fill="currentColor"/><rect x="6" y="3" width="4" height="12" rx="1" fill="currentColor"/><rect x="11" y="10" width="4" height="5" rx="1" fill="currentColor"/></svg>Rankings</button>
+      <button role="tab" id="tab-log" aria-controls="log" data-view="log" aria-selected="false" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5h9M5 8h9M5 12.5h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="2" cy="3.5" r="1.2" fill="currentColor"/><circle cx="2" cy="8" r="1.2" fill="currentColor"/><circle cx="2" cy="12.5" r="1.2" fill="currentColor"/></svg>Log</button>
+      <button role="tab" id="tab-play" aria-controls="play" data-view="play" aria-selected="false" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4L1.5 8l4 4M10.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Play</button>
+    </nav>
+  </div>
+</div>
+
+<main class="wrap page">
+  <section id="village" class="view" role="tabpanel" aria-labelledby="tab-village" tabindex="0">
+    <div class="village">
+      <div class="card mapbox">
+        <svg id="map" role="img" aria-label="Map of the village: every plot and its owner"></svg>
+        <p id="noPlots" class="empty" hidden>No plots yet. Every player who joins adds one.</p>
+      </div>
+      <div class="side">
+        <div class="card" id="plotCard">
+          <h2>Plot</h2>
+          <div id="detail" class="detail muted" aria-live="polite">Tap a plot or an owner to see who holds what.</div>
+        </div>
+        <div class="card">
+          <h2>Owners</h2>
+          <div id="legend" class="legend"></div>
+        </div>
+        <div class="card" id="historyCard">
+          <h2>History</h2>
+          <div class="timeline">
+            <button id="playBtn" class="btn" aria-label="Replay the history of the map"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg><span>Replay</span></button>
+            <input id="range" type="range" min="0" max="0" value="0" aria-label="Day shown on the map">
+          </div>
+          <div id="rangeLbl" class="when num muted">Today</div>
+        </div>
+        <p class="note">Plots are laid out in a spiral, oldest in the centre. A new plot appears every time someone registers. Faded plots have not been harvested yet today.</p>
+      </div>
+    </div>
   </section>
 
-  <section id="economy" class="view" hidden>
+  <section id="economy" class="view" role="tabpanel" aria-labelledby="tab-economy" tabindex="0" hidden>
     <div id="charts" class="charts"></div>
-    <p id="noStats" class="muted" hidden>Charts appear after the first day closes.</p>
+    <p id="noStats" class="card empty" hidden>Charts appear after the first days close.</p>
   </section>
 
-  <section id="rankings" class="view" hidden>
+  <section id="rankings" class="view" role="tabpanel" aria-labelledby="tab-rankings" tabindex="0" hidden>
     <div class="rankings">
-      <div class="box"><h2>Best life</h2><p class="muted" style="margin:2px 0 6px">rations eaten</p><table id="rLife"></table></div>
-      <div class="box"><h2>Richest</h2><p class="muted" style="margin:2px 0 6px">coins, land and food</p><table id="rWealth"></table></div>
-      <div class="box"><h2>Longest alive</h2><p class="muted" style="margin:2px 0 6px">days without dying</p><table id="rAlive"></table></div>
+      <div class="card"><h2><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 7h13a6.5 6.5 0 0 1-13 0z" fill="currentColor"/><path d="M5 5c0-1.5 1-1.5 1-3M8.5 5c0-1.5 1-1.5 1-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Best life</h2><p class="muted">rations eaten</p><ol id="rLife" class="rank"></ol></div>
+      <div class="card"><h2><svg viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="4" rx="6" ry="2.5" fill="currentColor"/><path d="M2 7c0 1.4 2.7 2.5 6 2.5S14 8.4 14 7M2 10.5C2 11.9 4.7 13 8 13s6-1.1 6-2.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Richest</h2><p class="muted">coins, land and food, in coins</p><ol id="rWealth" class="rank"></ol></div>
+      <div class="card"><h2><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14s-6-3.6-6-8a3.2 3.2 0 0 1 6-1.6A3.2 3.2 0 0 1 14 6c0 4.4-6 8-6 8z" fill="currentColor"/></svg>Longest alive</h2><p class="muted">days without dying</p><ol id="rAlive" class="rank"></ol></div>
     </div>
   </section>
 
-  <section id="log" class="view" hidden>
-    <ul id="events" class="log"></ul>
+  <section id="log" class="view" role="tabpanel" aria-labelledby="tab-log" tabindex="0" hidden>
+    <div class="filters" id="filters" aria-label="Show events">
+      <button class="chip" data-kind="" aria-pressed="true">All</button>
+      <button class="chip" data-kind="register claim" aria-pressed="false"><i style="background:var(--field)"></i>Arrivals</button>
+      <button class="chip" data-kind="land" aria-pressed="false"><i style="background:var(--grain)"></i>Land sales</button>
+      <button class="chip" data-kind="death" aria-pressed="false"><i style="background:var(--danger)"></i>Deaths</button>
+    </div>
+    <div id="events" class="card log"></div>
   </section>
 
-  <section id="play" class="view" hidden>
-    <div class="box">
+  <section id="play" class="view" role="tabpanel" aria-labelledby="tab-play" tabindex="0" hidden>
+    <div class="card hero">
       <h2>Play in 5 minutes</h2>
       <p>You don't click: you write a bot. Get a token, keep it secret and call the API once a day or more.</p>
-      <p id="signupGithub" hidden>
-        <a class="cta" href="login">Sign in with GitHub</a><br>
-        <small class="muted">One player per GitHub account. Sign in again any time to see your token.</small>
-      </p>
-      <pre id="snippet"></pre>
-      <p>Or start from the example bot, which uses only the Python standard library:</p>
-      <pre>git clone https://github.com/Naraka/fieldhand
-FIELDHAND_TOKEN=&lt;token&gt; python fieldhand/examples/bot.py --name my-bot --server <span class="origin"></span></pre>
-      <p>Run it with <code>--once</code> from cron to play one day per run.
-        The full API is documented at <a href="docs">/docs</a> and the rules are in
-        <a href="https://github.com/Naraka/fieldhand/blob/main/docs/RULES.md">RULES.md</a>.</p>
+    </div>
+    <div class="steps">
+      <div class="card step">
+        <h2><span class="k">1</span>Get a token</h2>
+        <div id="signupGithub" hidden>
+          <a class="btn primary" href="login"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.3.7.1-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.6 7.6 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.7-3.6 3.9.3.3.5.8.5 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 0z"/></svg>Sign in with GitHub</a>
+          <p class="note" style="margin-top:8px">One player per GitHub account. Sign in again any time to see your token.</p>
+        </div>
+        <div id="signupOpen">
+          <p>This server has open registration. Pick a name for your bot:</p>
+          <div class="code"><pre id="snipRegister"></pre></div>
+        </div>
+      </div>
+      <div class="card step">
+        <h2><span class="k">2</span>Play a day</h2>
+        <p>Claim a plot, harvest it and eat. Every request takes your token.</p>
+        <div class="code"><pre id="snippet"></pre></div>
+      </div>
+      <div class="card step">
+        <h2><span class="k">3</span>Or run the example bot</h2>
+        <p>It uses only the Python standard library.</p>
+        <div class="code"><pre>git clone https://github.com/Naraka/fieldhand
+FIELDHAND_TOKEN=&lt;token&gt; python fieldhand/examples/bot.py --name my-bot --server <span class="origin"></span></pre></div>
+        <p>Run it with <code>--once</code> from cron to play one day per run.
+          The full API is documented at <a href="docs">/docs</a> and the rules are in
+          <a href="https://github.com/Naraka/fieldhand/blob/main/docs/RULES.md">RULES.md</a>.</p>
+      </div>
     </div>
   </section>
+</main>
 
-  <footer>
-    Fieldhand is free software (AGPL-3.0). Source on
-    <a href="https://github.com/Naraka/fieldhand">GitHub</a>.
-  </footer>
-</div>
+<footer>
+  Fieldhand is free software (AGPL-3.0). Source on
+  <a href="https://github.com/Naraka/fieldhand">GitHub</a>.
+</footer>
 
 <script>
 (() => {
 "use strict";
 const $ = (id) => document.getElementById(id);
 const SVGNS = "http://www.w3.org/2000/svg";
-const OWNER_COLORS = ["var(--o1)", "var(--o2)", "var(--o3)", "var(--o4)", "var(--o5)"];
+const OWNER_COLORS = ["var(--o1)", "var(--o2)", "var(--o3)", "var(--o4)", "var(--o5)", "var(--o6)"];
 const REFRESH_MS = 15000;
+const VIEWS = ["village", "economy", "rankings", "log", "play"];
 
 let clock = null;            // last /clock answer and the local time it arrived
 let plots = [];              // current owners from /plots
@@ -221,8 +403,17 @@ let historyAfter = 0;
 let shownDay = null;         // null = today
 let replayTimer = null;
 let view = "village";
+let selPlot = null;          // index of the selected plot
+let selOwner = null;         // owner highlighted on the map
+let events = [];             // newest first
 let lastEventId = 0;
+let logKinds = "";
+let logShown = 100;          // events listed before "Show older"
+let stats = [];              // all /stats rows, for the Economy tab
 let statsDay = -1;
+let recentDay = -1;
+let chartsWidth = 0;
+let busy = false;
 
 async function get(path) {
   const r = await fetch(path, { headers: { Accept: "application/json" } });
@@ -231,15 +422,65 @@ async function get(path) {
 }
 
 const fmt = (v, digits = 2) => (v == null ? "–" : Number(v).toFixed(digits));
+const el = (tag, cls, text) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+};
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 // --- Clock ------------------------------------------------------------------
 
 function tickClock() {
   if (!clock) return;
   const left = Math.max(0, clock.seconds_left - (Date.now() - clock.at) / 1000);
-  const m = Math.floor(left / 60), s = Math.floor(left % 60);
-  $("left").textContent = `closes in ${m}:${String(s).padStart(2, "0")}`;
+  const h = Math.floor(left / 3600), m = Math.floor(left % 3600 / 60), s = Math.floor(left % 60);
+  const mm = h ? `${h}:${String(m).padStart(2, "0")}` : String(m);
+  $("left").textContent = `closes in ${mm}:${String(s).padStart(2, "0")}`;
+  const done = clock.day_seconds ? Math.min(100, 100 * (1 - left / clock.day_seconds)) : 0;
+  $("dayBar").firstChild.style.width = `${done}%`;
+  $("dayBar").setAttribute("aria-valuenow", Math.round(done));
   if (left === 0) refresh();
+}
+
+// --- Header cards -----------------------------------------------------------
+
+function spark(svg, values) {
+  const vs = values.filter((v) => v != null);
+  svg.replaceChildren();
+  if (vs.length < 2) return;
+  let lo = Math.min(...vs), hi = Math.max(...vs);
+  if (hi - lo < 1e-9) { lo -= 1; hi += 1; }
+  const pts = vs.map((v, i) => [100 * i / (vs.length - 1), 24 - 22 * (v - lo) / (hi - lo)]);
+  const d = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`).join("");
+  svg.innerHTML = `<path class="a" d="${d}L100,26L0,26Z"/><path d="${d}"/>`;
+}
+
+function change(id, rows, key) {
+  const vs = rows.filter((r) => r[key] != null);
+  const out = $(id);
+  if (vs.length < 2) { out.textContent = vs.length ? `on day ${vs[0].day}` : "no trades yet"; return; }
+  const a = vs[vs.length - 2][key], b = vs[vs.length - 1][key];
+  const pct = a ? 100 * (b - a) / a : 0;
+  const arrow = Math.abs(pct) < 0.05 ? "=" : pct > 0 ? "▲" : "▼";
+  out.textContent = `${arrow} ${Math.abs(pct).toFixed(1)}% on day ${vs[vs.length - 1].day}`;
+}
+
+async function renderRecent() {
+  if (!clock || recentDay === clock.day) return;
+  const rows = await get(`stats?since_day=${Math.max(0, clock.day - 30)}`);
+  recentDay = clock.day;
+  const last = rows[rows.length - 1];
+  $("sDeaths").textContent = last ? `${plural(last.deaths, "death")} on day ${last.day}` : "\u00a0";
+  $("sOwners").textContent = last ? last.owners : "–";
+  $("sHarvest").textContent = last && last.plots
+    ? `${Math.round(100 * last.harvested / last.plots)}% harvested` : "\u00a0";
+  $("sHarvest").title = last ? `Plots harvested on day ${last.day}` : "";
+  [["Ration", "ration_price"], ["Wage", "wage"], ["Land", "land_price"]].forEach(([k, key]) => {
+    spark($(`k${k}`), rows.map((r) => r[key]));
+    change(`d${k}`, rows, key);
+  });
 }
 
 // --- Map --------------------------------------------------------------------
@@ -263,35 +504,52 @@ function ownersOn(day) {
     if (row.day > day) break;
     owners[row.plot_id - 1] = row.owner;
   }
-  return owners;
+  return Array.from(owners, (o) => o || null);
+}
+
+function countOwners(owners) {
+  const counts = {};
+  owners.forEach((o) => { if (o) counts[o] = (counts[o] || 0) + 1; });
+  return counts;
 }
 
 function renderMap() {
   const live = shownDay === null;
   const owners = live ? plots.map((p) => p.owner) : ownersOn(shownDay);
-  const counts = {};
-  owners.forEach((o) => { if (o) counts[o] = (counts[o] || 0) + 1; });
-  const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5).map((e) => e[0]);
+  // Colours follow today's biggest owners, so they do not change during a replay.
+  const top = Object.entries(countOwners(plots.map((p) => p.owner)))
+    .sort((a, b) => b[1] - a[1]).slice(0, OWNER_COLORS.length).map((e) => e[0]);
+  const color = (o) => { const k = top.indexOf(o); return k >= 0 ? OWNER_COLORS[k] : "var(--o-other)"; };
+  const counts = countOwners(owners);
+  if (selOwner && !counts[selOwner]) selOwner = null;
+  if (selPlot !== null && selPlot >= owners.length) selPlot = null;
 
   const svg = $("map");
   svg.replaceChildren();
+  svg.toggleAttribute("hidden", !owners.length);  // SVG elements have no .hidden property
+  $("noPlots").hidden = owners.length > 0;
+  $("plotCard").hidden = $("historyCard").hidden = !plots.length;
   let minX = 0, minY = 0, maxX = 0, maxY = 0;
   owners.forEach((_, i) => {
     const [x, y] = spiral(i);
     minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
   });
-  svg.setAttribute("viewBox", `${minX - 0.6} ${minY - 0.6} ${maxX - minX + 2.2} ${maxY - minY + 2.2}`);
+  svg.setAttribute("viewBox", `${minX - 0.1} ${minY - 0.1} ${maxX - minX + 1.2} ${maxY - minY + 1.2}`);
   owners.forEach((o, i) => {
     const [x, y] = spiral(i);
     const r = document.createElementNS(SVGNS, "rect");
     r.setAttribute("x", x + 0.06); r.setAttribute("y", y + 0.06);
-    r.setAttribute("width", 0.88); r.setAttribute("height", 0.88); r.setAttribute("rx", 0.08);
-    if (!o) r.setAttribute("class", "free");
+    r.setAttribute("width", 0.88); r.setAttribute("height", 0.88); r.setAttribute("rx", 0.14);
+    r.dataset.i = i;
+    const cls = [];
+    if (!o) cls.push("free");
     else {
-      const k = top.indexOf(o);
-      r.style.fill = k >= 0 ? OWNER_COLORS[k] : "var(--o-other)";
-      if (live && !plots[i].harvested) r.setAttribute("class", "idle");
+      r.style.fill = color(o);
+      if (live && !plots[i].harvested) cls.push("idle");
     }
+    if (selOwner && o !== selOwner) cls.push("dim");
+    if (i === selPlot) cls.push("sel");
+    r.setAttribute("class", cls.join(" "));
     const t = document.createElementNS(SVGNS, "title");
     t.textContent = `Plot ${i + 1}: ${o || "free"}`;
     r.append(t);
@@ -300,26 +558,72 @@ function renderMap() {
 
   const lg = $("legend");
   lg.replaceChildren();
-  const item = (color, label, extra = "") => {
-    const s = document.createElement("span");
-    const i = document.createElement("i");
-    i.style.cssText = `background:${color};${extra}`;
-    s.append(i, label);
-    lg.append(s);
+  const item = (sw, label, n, owner) => {
+    const c = el(owner ? "button" : "span", "chip");
+    const i = el("i");
+    i.style.cssText = sw;
+    c.append(i, el("span", "", label), el("span", "n num", n));
+    if (owner) {
+      c.setAttribute("aria-pressed", owner === selOwner);
+      c.addEventListener("click", () => { selOwner = selOwner === owner ? null : owner; selPlot = null; renderMap(); });
+    }
+    lg.append(c);
   };
-  top.forEach((o, k) => item(OWNER_COLORS[k], `${o} · ${counts[o]}`));
+  top.filter((o) => counts[o]).forEach((o) => item(`background:${color(o)}`, o, counts[o], o));
   const others = Object.entries(counts).filter(([o]) => !top.includes(o)).reduce((s, [, c]) => s + c, 0);
-  if (others) item("var(--o-other)", `Others · ${others}`);
-  item("var(--bg)", `Free · ${owners.filter((o) => !o).length}`, "border:1px dashed var(--muted)");
+  if (others) item("background:var(--o-other)", "Others", others);
+  item("border:1px dashed var(--muted)", "Free", owners.filter((o) => !o).length);
+  if (!owners.length) lg.replaceChildren(el("span", "muted", "Nobody owns land yet."));
+
+  const det = $("detail");
+  if (selPlot !== null) {
+    const o = owners[selPlot];
+    det.className = "detail";
+    det.replaceChildren();
+    const b = el("b", "", `Plot #${selPlot + 1}`);
+    const line = el("div");
+    if (o) {
+      const sw = el("span", "sw"); sw.style.background = color(o);
+      line.append(sw, `${o} · ${plural(counts[o], "plot")} in total`);
+    } else line.textContent = "Free: any player without land can claim it.";
+    det.append(b, line);
+    if (o && live) det.append(el("div", "muted", plots[selPlot].harvested ? "Harvested today." : "Not harvested yet today."));
+    if (!live) det.append(el("div", "muted", `At the end of day ${shownDay}.`));
+  } else if (selOwner) {
+    det.className = "detail";
+    det.replaceChildren(el("b", "", selOwner), el("div", "", `${plural(counts[selOwner], "plot")} highlighted on the map.`));
+  } else {
+    det.className = "detail muted";
+    det.textContent = "Tap a plot or an owner to see who holds what.";
+  }
 
   const range = $("range");
   range.max = clock ? clock.day : 0;
   if (live) range.value = range.max;
-  $("rangeLbl").textContent = live ? "today" : `end of day ${shownDay}`;
+  $("rangeLbl").textContent = live ? `Today, day ${clock ? clock.day : "–"}` : `End of day ${shownDay}`;
+}
+
+$("map").addEventListener("click", (e) => {
+  const i = e.target.dataset && e.target.dataset.i;
+  if (i === undefined) { selPlot = null; selOwner = null; }
+  else if (selPlot === +i) { selPlot = null; selOwner = null; }
+  else {
+    selPlot = +i;
+    const owners = shownDay === null ? plots.map((p) => p.owner) : ownersOn(shownDay);
+    selOwner = owners[selPlot] || null;
+  }
+  renderMap();
+});
+
+function setPlayBtn(playing) {
+  const b = $("playBtn");
+  b.querySelector("span").textContent = playing ? "Pause" : "Replay";
+  b.querySelector("path").setAttribute("d", playing ? "M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" : "M4 2.5v11l9-5.5z");
+  b.setAttribute("aria-label", playing ? "Pause the replay" : "Replay the history of the map");
 }
 
 function stopReplay() {
-  if (replayTimer) { clearInterval(replayTimer); replayTimer = null; $("playBtn").textContent = "Replay"; }
+  if (replayTimer) { clearInterval(replayTimer); replayTimer = null; setPlayBtn(false); }
 }
 
 $("range").addEventListener("input", (e) => {
@@ -335,7 +639,7 @@ $("playBtn").addEventListener("click", () => {
   const step = Math.max(1, Math.ceil(last / 200));
   const ms = matchMedia("(prefers-reduced-motion: reduce)").matches ? 400 : 60;
   let d = 0;
-  $("playBtn").textContent = "Pause";
+  setPlayBtn(true);
   replayTimer = setInterval(() => {
     if (d >= last) { stopReplay(); shownDay = null; renderMap(); return; }
     shownDay = d; renderMap(); d += step;
@@ -344,123 +648,197 @@ $("playBtn").addEventListener("click", () => {
 
 // --- Charts -----------------------------------------------------------------
 
-function niceTicks(lo, hi, n) {
+// Round tick values between lo and hi; with `cover` they also enclose lo and hi.
+function niceTicks(lo, hi, n, integer = false, cover = false) {
   if (hi <= lo) hi = lo + 1;
   const raw = (hi - lo) / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), err = raw / mag;
-  const step = (err >= 7.5 ? 10 : err >= 3.5 ? 5 : err >= 1.5 ? 2 : 1) * mag;
+  let step = (err >= 7.5 ? 10 : err >= 3.5 ? 5 : err >= 1.5 ? 2 : 1) * mag;
+  if (integer) step = Math.max(1, Math.round(step));
+  const first = (cover ? Math.floor(lo / step + 1e-9) : Math.ceil(lo / step - 1e-9)) * step;
+  const last = cover ? Math.ceil(hi / step - 1e-9) * step : hi;
   const ticks = [];
-  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) ticks.push(+v.toFixed(6));
+  for (let v = first; v <= last + 1e-9; v += step) ticks.push(+v.toFixed(6));
   return ticks;
 }
 
-function lineChart(host, title, sub, days, values, format, opts = {}) {
-  const pairs = days.map((d, i) => [d, values[i]]).filter(([, v]) => v != null);
-  if (pairs.length < 2) return;
-  const W = 560, H = 170, L = 44, R = 10, T = 10, B = 24;
+function lineChart(host, c) {
+  const pairs = stats.map((r) => [r.day, c.value(r)]).filter(([, v]) => v != null);
+  if (pairs.length < 2) return false;
+  const box = el("div", "chart card");
+  if (c.color) box.style.setProperty("--c", c.color);
+  host.append(box);
+  const W = Math.max(260, Math.round(box.clientWidth - 32) || 520), H = W < 420 ? 170 : 190;
+  const fs = 11, L = 8, R = 8, T = 10, B = 22;
   const vs = pairs.map((p) => p[1]);
-  let lo = opts.min ?? Math.min(...vs), hi = opts.max ?? Math.max(...vs);
-  if (opts.min == null) { const pad = (hi - lo) * 0.1 || Math.abs(hi) * 0.1 || 1; lo = Math.max(0, lo - pad); hi += pad; }
-  const ticks = niceTicks(lo, hi, 3);
-  lo = Math.min(lo, ticks[0]); hi = Math.max(hi, ticks[ticks.length - 1]);
+  let lo = c.min ?? Math.min(...vs), hi = c.max ?? Math.max(...vs);
+  if (c.min == null) { const pad = (hi - lo) * 0.05 || Math.abs(hi) * 0.1 || 1; lo = Math.max(0, lo - pad); hi += pad; }
+  const ticks = niceTicks(lo, hi, 3, c.int, true);
+  lo = ticks[0]; hi = ticks[ticks.length - 1];
+  // Left margin fits the widest tick label.
+  const LW = L + Math.max(...ticks.map((t) => c.format(t).length)) * fs * 0.62 + 6;
   const d0 = pairs[0][0], d1 = pairs[pairs.length - 1][0];
-  const X = (d) => L + (W - L - R) * (d - d0) / Math.max(1, d1 - d0);
+  const X = (d) => LW + (W - LW - R) * (d - d0) / Math.max(1, d1 - d0);
   const Y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+  const xt = niceTicks(d0, d1, W < 420 ? 3 : 5, true).filter((d) => d >= d0 && d <= d1);
 
-  const box = document.createElement("div");
-  box.className = "chart box";
-  const h = document.createElement("h3"); h.textContent = title;
-  const s = document.createElement("div"); s.className = "sub"; s.textContent = sub;
-  box.append(h, s);
+  const head = el("div", "head");
+  head.append(el("h3", "", c.title), el("b", "num", c.format(pairs[pairs.length - 1][1])));
+  box.append(head, el("div", "sub", c.sub));
   const svg = document.createElementNS(SVGNS, "svg");
-  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", title);
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", `${c.title}, day ${d0} to ${d1}: latest ${c.format(pairs[pairs.length - 1][1])}`);
   const path = pairs.map(([d, v], k) => `${k ? "L" : "M"}${X(d).toFixed(1)},${Y(v).toFixed(1)}`).join("");
   svg.innerHTML =
-    `<g class="grid">${ticks.map((t) => `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}"/>`).join("")}</g>` +
-    `<g class="ax">${ticks.map((t) => `<text x="${L - 6}" y="${Y(t) + 3}" text-anchor="end">${format(t)}</text>`).join("")}` +
-    `<text x="${L}" y="${H - 6}">day ${d0}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">day ${d1}</text></g>` +
-    (opts.area ? `<path class="ar" d="${path}L${X(d1)},${Y(lo)}L${X(d0)},${Y(lo)}Z"/>` : "") +
+    `<g class="grid">${ticks.map((t) => `<line x1="${LW}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}"/>`).join("")}</g>` +
+    `<line class="base" x1="${LW}" x2="${W - R}" y1="${H - B}" y2="${H - B}"/>` +
+    `<g class="ax">${ticks.map((t) => `<text x="${LW - 6}" y="${Y(t) + 4}" text-anchor="end">${c.format(t)}</text>`).join("")}` +
+    xt.map((d, k) => `<text x="${X(d)}" y="${H - 6}" text-anchor="${xt.length > 1 && k === xt.length - 1 && X(d) > W - 30 ? "end" : "middle"}">${k ? d : `day ${d}`}</text>`).join("") + `</g>` +
+    (c.area ? `<path class="ar" d="${path}L${X(d1)},${Y(lo)}L${X(d0)},${Y(lo)}Z"/>` : "") +
     `<path class="ln" d="${path}"/><g class="hov" visibility="hidden"><line y1="${T}" y2="${H - B}"/><circle r="4"/></g>`;
   box.append(svg);
-  const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; box.append(tip);
+  const tip = el("div", "tip"); tip.hidden = true; box.append(tip);
   const hov = svg.querySelector(".hov"), hl = hov.querySelector("line"), hc = hov.querySelector("circle");
   const move = (e) => {
     const r = svg.getBoundingClientRect(), b = box.getBoundingClientRect();
     const x = (e.clientX - r.left) * W / r.width;
-    const target = d0 + (x - L) / (W - L - R) * (d1 - d0);
+    const target = d0 + (x - LW) / (W - LW - R) * (d1 - d0);
     let best = pairs[0];
     for (const p of pairs) if (Math.abs(p[0] - target) < Math.abs(best[0] - target)) best = p;
     hov.setAttribute("visibility", "visible");
     hl.setAttribute("x1", X(best[0])); hl.setAttribute("x2", X(best[0]));
     hc.setAttribute("cx", X(best[0])); hc.setAttribute("cy", Y(best[1]));
-    tip.hidden = false; tip.textContent = `day ${best[0]}: ${format(best[1])}`;
-    tip.style.left = `${X(best[0]) * r.width / W + r.left - b.left}px`;
-    tip.style.top = `${Y(best[1]) * r.height / H + r.top - b.top}px`;
+    tip.hidden = false; tip.textContent = `Day ${best[0]}: ${c.format(best[1])}`;
+    const px = X(best[0]) * r.width / W + r.left - b.left, half = tip.offsetWidth / 2;
+    tip.style.left = `${Math.min(b.width - half - 4, Math.max(half + 4, px)) - half}px`;
+    tip.style.top = `${Math.max(0, Y(best[1]) * r.height / H + r.top - b.top - tip.offsetHeight - 10)}px`;
   };
   svg.addEventListener("pointermove", move);
   svg.addEventListener("pointerdown", move);
   svg.addEventListener("pointerleave", () => { hov.setAttribute("visibility", "hidden"); tip.hidden = true; });
-  host.append(box);
+  return true;
+}
+
+const CHARTS = [
+  { title: "Ration price", sub: "coins per ration, daily average", value: (r) => r.ration_price, format: (v) => fmt(v) },
+  { title: "Wage", sub: "coins per workday, daily average", value: (r) => r.wage, format: (v) => fmt(v) },
+  { title: "Land price", sub: "coins per plot, daily average", value: (r) => r.land_price, format: (v) => fmt(v, 1) },
+  { title: "Money", sub: "coins in the village", value: (r) => r.money, format: (v) => fmt(v, 0), area: true, int: true },
+  { title: "Harvest", sub: "% of plots harvested", value: (r) => (r.plots ? 100 * r.harvested / r.plots : null),
+    format: (v) => `${fmt(v, 0)}%`, min: 0, max: 100, area: true },
+  { title: "Landowners", sub: "players with at least one plot", value: (r) => r.owners, format: (v) => fmt(v, 0), int: true },
+  { title: "Players", sub: "players in the village", value: (r) => r.players, format: (v) => fmt(v, 0), int: true },
+  { title: "Deaths", sub: "players who starved each day", value: (r) => r.deaths, format: (v) => fmt(v, 0),
+    area: true, int: true, min: 0, color: "var(--danger)" },
+];
+
+function drawCharts() {
+  const host = $("charts");
+  host.replaceChildren();
+  let any = false;
+  for (const c of CHARTS) any = lineChart(host, c) || any;
+  $("noStats").hidden = any;
 }
 
 async function renderEconomy() {
-  if (!clock || statsDay === clock.day) return;
-  const rows = await get(`stats?since_day=${Math.max(0, clock.day - 2000)}`);
-  statsDay = clock.day;
-  const host = $("charts");
-  host.replaceChildren();
-  $("noStats").hidden = rows.length > 1;
-  const days = rows.map((r) => r.day), col = (k) => rows.map((r) => r[k]);
-  lineChart(host, "Ration price", "coins per ration, daily average", days, col("ration_price"), (v) => fmt(v));
-  lineChart(host, "Wage", "coins per workday, daily average", days, col("wage"), (v) => fmt(v));
-  lineChart(host, "Deaths", "players who starved each day", days, col("deaths"), (v) => fmt(v, 0), { area: true });
-  lineChart(host, "Harvest", "% of plots harvested", days,
-    rows.map((r) => (r.plots ? 100 * r.harvested / r.plots : null)), (v) => `${fmt(v, 0)} %`, { min: 0, max: 100, area: true });
-  lineChart(host, "Landowners", "players with at least one plot", days, col("owners"), (v) => fmt(v, 0));
-  lineChart(host, "Money", "coins in the village", days, col("money"), (v) => fmt(v, 0), { area: true });
+  if (clock && statsDay !== clock.day) {
+    stats = await get(`stats?since_day=${Math.max(0, clock.day - 2000)}`);
+    statsDay = clock.day;
+    drawCharts();
+  } else if (!$("charts").children.length || chartsWidth !== $("charts").clientWidth) drawCharts();
+  chartsWidth = $("charts").clientWidth;
 }
+
+let resizeTimer = null;
+addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (view === "economy" && statsDay >= 0 && chartsWidth !== $("charts").clientWidth) {
+      chartsWidth = $("charts").clientWidth; drawCharts();
+    }
+  }, 150);
+});
 
 // --- Rankings and log -------------------------------------------------------
 
-function fillTable(table, rows, format) {
-  table.replaceChildren();
-  rows.slice(0, 15).forEach((r, i) => {
-    const tr = document.createElement("tr");
-    const cells = [String(i + 1), r.name, format(r.value)];
-    cells.forEach((text, k) => {
-      const td = document.createElement("td");
-      td.textContent = text;
-      td.className = k === 1 ? "name" : "r num";
-      tr.append(td);
-    });
-    table.append(tr);
+function fillRank(list, rows, format) {
+  list.replaceChildren();
+  const top = rows.slice(0, 10);
+  if (!top.length) { list.append(el("li", "none muted", "Nobody yet.")); return; }
+  const max = Math.max(...top.map((r) => r.value), 0) || 1;
+  top.forEach((r, i) => {
+    const li = el("li");
+    const meter = el("div", "meter"), bar = el("i");
+    bar.style.width = `${Math.max(0, 100 * r.value / max)}%`;
+    meter.append(bar);
+    li.append(el("span", "pos num", i + 1), el("span", "who", r.name), el("span", "val num", format(r.value)), meter);
+    list.append(li);
   });
 }
 
 async function renderRankings() {
   const [life, wealth, alive] = await Promise.all(
     ["life", "wealth", "alive"].map((by) => get(`ranking?by=${by}`)));
-  fillTable($("rLife"), life, (v) => fmt(v, 0));
-  fillTable($("rWealth"), wealth, (v) => fmt(v, 1));
-  fillTable($("rAlive"), alive, (v) => fmt(v, 0));
+  fillRank($("rLife"), life, (v) => fmt(v, 0));
+  fillRank($("rWealth"), wealth, (v) => fmt(v, 1));
+  fillRank($("rAlive"), alive, (v) => fmt(v, 0));
 }
 
-async function renderLog() {
-  const rows = await get(`events?after_id=${lastEventId}&limit=200`);
-  const list = $("events");
-  rows.reverse().forEach((e) => {
-    const li = document.createElement("li");
-    li.className = e.kind;
-    const d = document.createElement("span"); d.className = "d"; d.textContent = `day ${e.day}`;
-    li.append(d, e.text);
-    list.prepend(li);
-    lastEventId = Math.max(lastEventId, e.id);
-  });
-  while (list.children.length > 500) list.lastChild.remove();
+function drawLog() {
+  const host = $("events");
+  host.replaceChildren();
+  const kinds = logKinds ? logKinds.split(" ") : null;
+  const all = kinds ? events.filter((e) => kinds.includes(e.kind)) : events;
+  const rows = all.slice(0, logShown);
+  if (!rows.length) { host.append(el("p", "empty", events.length ? "No events of this kind." : "Nothing has happened yet.")); return; }
+  let day = null, ul = null;
+  for (const e of rows) {
+    if (e.day !== day) {
+      day = e.day;
+      const g = el("div");
+      ul = el("ul");
+      g.append(el("h3", "num", `Day ${day}`), ul);
+      host.append(g);
+    }
+    const li = el("li", e.kind);
+    li.append(el("i"), el("span", "", e.text));
+    ul.append(li);
+  }
+  if (all.length > rows.length) {
+    const more = el("button", "btn", "Show older events");
+    more.type = "button";
+    more.style.alignSelf = "center";
+    more.addEventListener("click", () => { logShown += 100; drawLog(); });
+    host.append(more);
+  }
 }
+
+let logBusy = false;
+async function renderLog() {
+  if (logBusy) return;
+  logBusy = true;
+  let rows;
+  try { rows = await get(`events?after_id=${lastEventId}&limit=200`); } finally { logBusy = false; }
+  if (rows.length) {
+    events = rows.concat(events).slice(0, 500);
+    lastEventId = Math.max(lastEventId, ...rows.map((e) => e.id));
+  }
+  if (rows.length || !$("events").children.length) drawLog();
+}
+
+$("filters").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  logKinds = b.dataset.kind;
+  logShown = 100;
+  $("filters").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+  drawLog();
+});
 
 // --- Refresh ----------------------------------------------------------------
 
 async function refresh() {
+  if (busy) return;
+  busy = true;
   try {
     const [c, w, p] = await Promise.all([get("clock"), get("world"), get("plots")]);
     clock = { ...c, at: Date.now() };
@@ -474,47 +852,103 @@ async function refresh() {
     $("error").hidden = true;
     $("day").textContent = c.day;
     $("sPlayers").textContent = w.players;
-    $("sPlots").textContent = w.plots;
-    $("sFree").textContent = `${w.free_plots} free`;
+    $("sFree").textContent = w.free_plots;
+    $("sPlots").textContent = `of ${plural(w.plots, "plot")}`;
     $("sRation").textContent = fmt(w.prices.ration_price);
     $("sWage").textContent = fmt(w.prices.wage);
-    $("sLand").textContent = fmt(w.prices.land_price);
+    $("sLand").textContent = fmt(w.prices.land_price, 1);
     $("signupGithub").hidden = w.signup !== "github";
-    $("snippet").textContent = (w.signup === "github" ? "" : register) + playSnippet;
-    if (view === "village") renderMap();
-    if (view === "economy") await renderEconomy();
-    if (view === "rankings") await renderRankings();
-    if (view === "log") await renderLog();
+    $("signupOpen").hidden = w.signup === "github";
+    tickClock();
+    await renderRecent();
+    await renderView();
   } catch (err) {
     $("error").hidden = false;
+  } finally {
+    busy = false;
   }
 }
 
-document.querySelectorAll("nav.tabs button").forEach((b) => {
-  b.addEventListener("click", () => {
-    view = b.dataset.view;
-    document.querySelectorAll("nav.tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
-    document.querySelectorAll(".view").forEach((s) => { s.hidden = s.id !== view; });
-    if (view !== "village") stopReplay();
-    refresh();
+// Draw the open tab. Only its own data is fetched: switching tabs is cheap.
+async function renderView() {
+  if (view === "village" && !replayTimer) renderMap();
+  if (view === "economy") await renderEconomy();
+  if (view === "rankings") await renderRankings();
+  if (view === "log") await renderLog();
+}
+
+// --- Tabs -------------------------------------------------------------------
+
+const tabs = [...document.querySelectorAll("nav.tabs button")];
+
+function show(name, focus = false) {
+  if (!VIEWS.includes(name)) name = "village";
+  view = name;
+  tabs.forEach((t) => {
+    const on = t.dataset.view === name;
+    t.setAttribute("aria-selected", on);
+    t.tabIndex = on ? 0 : -1;
+    if (on && focus) t.focus();
+  });
+  document.querySelectorAll(".view").forEach((s) => { s.hidden = s.id !== name; });
+  if (name !== "village") stopReplay();
+  if (clock) renderView().catch(() => { $("error").hidden = false; });
+  else refresh();
+}
+
+tabs.forEach((t, k) => {
+  t.addEventListener("click", () => {
+    if (location.hash !== `#${t.dataset.view}`) setHash(t.dataset.view);
+    show(t.dataset.view);
+  });
+  t.addEventListener("keydown", (e) => {
+    const n = { ArrowRight: k + 1, ArrowLeft: k - 1, Home: 0, End: tabs.length - 1 }[e.key];
+    if (n === undefined) return;
+    e.preventDefault();
+    const to = tabs[(n + tabs.length) % tabs.length].dataset.view;
+    setHash(to);
+    show(to, true);
   });
 });
 
-const origin = location.origin;
-document.querySelectorAll(".origin").forEach((el) => { el.textContent = origin; });
-const register =
-`curl -X POST ${origin}/register -H 'Content-Type: application/json' -d '{"name": "my-bot"}'
-# → {"token": "..."}  keep it: it is shown only once
+function setHash(name) {
+  window.history.replaceState(null, "", `#${name}`);
+}
 
-`;
-const playSnippet =
+addEventListener("hashchange", () => show(location.hash.slice(1)));
+
+// --- Snippets ---------------------------------------------------------------
+
+const origin = location.origin;
+document.querySelectorAll(".origin").forEach((e) => { e.textContent = origin; });
+$("snipRegister").textContent =
+`curl -X POST ${origin}/register -H 'Content-Type: application/json' -d '{"name": "my-bot"}'
+# → {"token": "..."}  keep it: it is shown only once`;
+$("snippet").textContent =
 `curl ${origin}/me -H 'Authorization: Bearer <token>'
 curl -X POST ${origin}/claim -H 'Authorization: Bearer <token>'
 curl -X POST ${origin}/harvest -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"plot_id": 1}'
 curl -X POST ${origin}/eat -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"qty": 1}'`;
-$("snippet").textContent = register + playSnippet;
 
-refresh();
+if (navigator.clipboard && window.isSecureContext) {
+  document.querySelectorAll(".code").forEach((box) => {
+    const b = el("button", "btn copy", "Copy");
+    b.type = "button";
+    b.setAttribute("aria-label", "Copy to clipboard");
+    b.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(box.querySelector("pre").textContent);
+        b.textContent = "Copied";
+      } catch (err) {
+        b.textContent = "Failed";
+      }
+      setTimeout(() => { b.textContent = "Copy"; }, 1500);
+    });
+    box.append(b);
+  });
+}
+
+show(location.hash.slice(1));
 setInterval(refresh, REFRESH_MS);
 setInterval(tickClock, 1000);
 })();
