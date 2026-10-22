@@ -7,7 +7,7 @@ On servers with GitHub sign-in, get your token at /login and pass it in
 FIELDHAND_TOKEN. Elsewhere the bot registers itself and keeps the token.
 
 Every day it: claims land if it has none, harvests or looks for a job,
-buys food if it has none, eats, and sells what it will not need.
+buys food or asks for it if it has none, eats, and sells what it will not need.
 """
 
 import argparse
@@ -91,16 +91,22 @@ def play_day(api, log):
         except RuntimeError:
             break
 
-    # 4. Food: buy the cheapest rations if there is nothing to eat.
+    # 4. Food: buy the cheapest ration if there is nothing to eat,
+    #    or ask for one and hope someone sells it later today.
     me = api.get("/me")
     if me["rations"] == 0:
-        for offer in api.get("/offers?kind=sell_rations"):
+        for offer in sorted(api.get("/offers?kind=sell_rations"), key=lambda o: o["price"]):
             try:
                 api.post(f"/offers/{offer['id']}/accept")
                 log(f"bought a ration for {offer['price']}")
                 break
             except RuntimeError:
                 continue
+        else:
+            price = min(me["coins"], 1.2 * ration_price)
+            if price > 0:
+                api.post("/offers", {"kind": "buy_rations", "qty": 1, "price": round(price, 3)})
+                log(f"asked for a ration at {price:.3f}")
 
     # 5. Eat. This is the one thing a bot must never forget.
     me = api.get("/me")
@@ -109,7 +115,18 @@ def play_day(api, log):
         me["rations"] -= 1
 
     # 6. Sell the surplus before it spoils.
+    #    First to whoever is asking for food, then to whoever comes later.
     surplus = me["rations"] - 4
+    for offer in sorted(api.get("/offers?kind=buy_rations"), key=lambda o: -o["price"]):
+        if surplus <= 0 or offer["price"] < 0.9 * ration_price:
+            break
+        n = min(surplus, offer["qty"])
+        try:
+            api.post(f"/offers/{offer['id']}/accept", {"qty": n})
+            log(f"sold {n} rations to {offer['player']} for {offer['price']}")
+            surplus -= n
+        except RuntimeError:
+            continue
     if surplus > 0:
         api.post("/offers", {"kind": "sell_rations", "qty": surplus, "price": ration_price})
         log(f"offered {surplus} rations at {ration_price:.3f}")
@@ -141,8 +158,9 @@ def main():
             print(f"[{args.name}] day {day}: error: {e}")
         if args.once:
             break
-        # Wait for the next day; the clock tells us exactly when it starts.
-        time.sleep(api.get("/clock")["seconds_left"] + 0.5)
+        # Play again in the middle of the next day, when most offers are posted.
+        clock = api.get("/clock")
+        time.sleep(clock["seconds_left"] + clock["day_seconds"] / 3)
 
 
 if __name__ == "__main__":
